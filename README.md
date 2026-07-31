@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 가지 않은 운
 
-## Getting Started
+과거의 한 갈림길을 입력하면, 사주에서 파생된 서로 다른 세 축을 카드로 봉인하고 사용자가 고른 한 장의 이후 3년을 보여 주는 반사실 서사 웹앱입니다.
 
-First, run the development server:
+## 실행
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+검증 명령:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+이 작업 환경은 Android/ARM64라 Turbopack 네이티브 바인딩을 사용할 수 없습니다. 따라서 프로덕션 빌드는 Next.js 16 문서가 안내하는 Webpack 플래그를 사용합니다.
 
-## Learn More
+## 현재 구현
 
-To learn more about Next.js, take a look at the following resources:
+- 만 14세 이상 연령 게이트
+- 출생 정보 브라우저 캐시와 KASI 정본 절기표 기반 원국·십신·대운·진태양시 계산
+- 사건 프리셋, 필수 서술 1개, 선택 서술, 세 개의 상황 척도
+- 고위험 사건의 생성 전 차단과 상담 연락처 안내
+- 십신 축 기반 세 카드 및 SHA-256 봉인 검증
+- 선택하지 않은 카드 문구를 클라이언트에 전송하지 않는 서버 세션
+- NDJSON 스트리밍으로 순차 공개되는 3개월·1년·3년 서사
+- 득실, 공통 과제, 계산 근거, 불확실성 고지, 결과 평가
+- 360px 모바일 레이아웃, 키보드 포커스, 축소 모션·축소 투명도·고대비 대응
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Phase 0 세션은 서버 메모리에 보관되며 프로세스를 재시작하면 사라집니다. Firebase, TTL 정책, App Check, 모델 예산 킬스위치는 설계 문서상 Phase 1 배포 인프라 범위입니다.
