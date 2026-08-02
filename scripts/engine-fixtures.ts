@@ -7,6 +7,8 @@ function fixture(overrides: Partial<ReadingInput> = {}): ReadingInput {
   return {
     birth: {
       date: "1991-07-15",
+      calendarType: "solar",
+      lunarLeapMonth: false,
       time: "09:30",
       timeUnknown: false,
       city: "서울",
@@ -37,6 +39,8 @@ function fingerprint(input: ReadingInput) {
 }
 
 assert.deepEqual(fingerprint(fixture()), fingerprint(fixture()), "동일 입력은 같은 명세를 만들어야 합니다.");
+const lunarEquivalent = fixture({ birth: { ...fixture().birth, date: "1991-06-04", calendarType: "lunar", lunarLeapMonth: false } });
+assert.deepEqual(fingerprint(fixture()), fingerprint(lunarEquivalent), "같은 생일의 양력·음력 입력은 같은 명세를 만들어야 합니다.");
 
 const sample = createReadingSession(fixture());
 assert.equal(new Set(sample.choices.map((choice) => choice.axis)).size, 3, "세 카드는 서로 다른 십신 축이어야 합니다.");

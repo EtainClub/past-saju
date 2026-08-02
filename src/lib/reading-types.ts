@@ -10,6 +10,8 @@ export type EventCategory =
 
 export type BirthInput = {
   date: string;
+  calendarType: "solar" | "lunar";
+  lunarLeapMonth: boolean;
   time: string;
   timeUnknown: boolean;
   city: string;

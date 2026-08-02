@@ -19,6 +19,7 @@ import type {
   TenGodAxis,
   TurningPoint,
 } from "./reading-types";
+import { resolveSolarBirthDate } from "./birth-date";
 
 const AXES: TenGodAxis[] = ["식상", "관성", "재성", "인성", "비겁"];
 const DOMAIN_BY_AXIS: Record<TenGodAxis, Domain> = {
@@ -28,6 +29,7 @@ const DOMAIN_BY_AXIS: Record<TenGodAxis, Domain> = {
   인성: "학습·내면",
   비겁: "동료·독립",
 };
+const KOREA_AVERAGE_LONGITUDE = 127.5;
 const CITY_LONGITUDE: Record<string, number> = {
   서울: 126.978,
   부산: 129.0756,
@@ -141,9 +143,13 @@ function equationOfTime(date: Date) {
 
 function hourConfidenceBand(input: ReadingInput): NarrativeSpec["confidence"]["hourPillar"] {
   if (input.birth.timeUnknown || !input.birth.time) return "unknown";
-  const date = new Date(`${input.birth.date}T${input.birth.time}:00+09:00`);
+  const solarBirth = resolveSolarBirthDate(input.birth);
+  if (!solarBirth) return "unknown";
+  const date = new Date(
+    `${solarBirth.year}-${String(solarBirth.month).padStart(2, "0")}-${String(solarBirth.day).padStart(2, "0")}T${input.birth.time}:00+09:00`,
+  );
   const [hours, minutes] = input.birth.time.split(":").map(Number);
-  const longitude = CITY_LONGITUDE[input.birth.city] ?? CITY_LONGITUDE.서울;
+  const longitude = CITY_LONGITUDE[input.birth.city] ?? KOREA_AVERAGE_LONGITUDE;
   const trueMinutes = (hours * 60 + minutes + (longitude - 135) * 4 + equationOfTime(date) + 1440) % 1440;
   const branchBoundaryDistance = Math.min(...Array.from({ length: 12 }, (_, index) => {
     const boundary = (index * 120 + 60) % 1440;
@@ -160,21 +166,22 @@ function hourConfidenceNote(confidence: NarrativeSpec["confidence"]["hourPillar"
 }
 
 function calculateChart(input: ReadingInput) {
-  const [year, month, day] = input.birth.date.split("-").map(Number);
+  const solarBirth = resolveSolarBirthDate(input.birth);
+  if (!solarBirth) throw new Error("유효하지 않은 생년월일입니다.");
   const [hour, minute] = input.birth.timeUnknown || !input.birth.time
     ? [12, 0]
     : input.birth.time.split(":").map(Number);
   const gender = input.birth.gender === "남성" ? "male" : input.birth.gender === "여성" ? "female" : undefined;
   return calculateFourPillars({
-    year,
-    month,
-    day,
+    year: solarBirth.year,
+    month: solarBirth.month,
+    day: solarBirth.day,
     hour,
     minute,
     gender,
     dayBoundary: "jasi",
     trueSolarTime: {
-      longitude: CITY_LONGITUDE[input.birth.city] ?? CITY_LONGITUDE.서울,
+      longitude: CITY_LONGITUDE[input.birth.city] ?? KOREA_AVERAGE_LONGITUDE,
       applyEquationOfTime: true,
       applyHistoricalDst: true,
     },
@@ -310,8 +317,9 @@ function buildEngineContext(input: ReadingInput): EngineContext {
   const chart = calculateChart(input);
   const strengthScore = calculateStrength(chart, input.birth.timeUnknown);
   const [eventYear, eventMonth] = input.event.date.split("-").map(Number);
-  const [birthYear, birthMonth] = input.birth.date.split("-").map(Number);
-  const eventAge = eventYear + (eventMonth - 1) / 12 - (birthYear + (birthMonth - 1) / 12);
+  const solarBirth = resolveSolarBirthDate(input.birth);
+  if (!solarBirth) throw new Error("유효하지 않은 생년월일입니다.");
+  const eventAge = eventYear + (eventMonth - 1) / 12 - (solarBirth.year + (solarBirth.month - 1) / 12);
   const luck = chart.luckPillars;
   const preciseStart = luck ? luck.startYears + luck.startMonths / 12 + luck.startDays / 365 : 0;
   const nearestBoundary = luck ? preciseStart + Math.round((eventAge - preciseStart) / 10) * 10 : -100;

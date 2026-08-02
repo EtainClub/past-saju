@@ -81,6 +81,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .brand-mark::after { transform: rotate(60deg); }
 .brand-mark i:first-child { transform: rotate(-60deg); }
 .brand-mark i:last-child { width: .25rem; height: .25rem; border-radius: 50%; background: var(--wine); }
+
+.brand-copy { display: grid; gap: .15rem; line-height: 1; text-align: left; }
+.brand-copy strong { font-size: .97rem; font-weight: 680; letter-spacing: -.035em; }
+.brand-copy small { color: var(--faint); font-size: .56rem; font-weight: 570; letter-spacing: .07em; }
 .icon-button { justify-self: end; width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; background: rgba(255,255,255,.2); cursor: pointer; transition: transform 100ms ease-out, opacity 100ms ease-out, background 180ms ease; }
 .icon-button span { font-family: Georgia, serif; font-style: italic; font-size: .86rem; }
 .icon-button:hover { background: rgba(255,255,255,.65); }
@@ -106,6 +110,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   text-wrap: balance;
 }
 .hero-description { color: var(--muted); line-height: 1.95; margin: 2rem 0 2.3rem; font-size: .98rem; }
+
+.brand-definition { max-width: 34rem; margin: -.65rem 0 1.8rem; padding: .8rem 0; display: grid; grid-template-columns: auto 1fr; align-items: start; gap: .8rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: .72rem; line-height: 1.7; }
+.brand-definition strong { color: var(--wine); font-size: .66rem; letter-spacing: .04em; white-space: nowrap; }
+.brand-definition p { margin: 0; word-break: keep-all; }
 .primary-button, .secondary-button {
   min-height: 3.55rem;
   border-radius: 999px;
@@ -186,7 +194,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .field-grid { display: grid; gap: 1rem; }
 .two-columns { grid-template-columns: 1fr 1fr; }
 .field { display: flex; flex-direction: column; gap: .55rem; position: relative; }
-.field > span, .category-field legend { font-size: .74rem; font-weight: 680; color: #555149; }
+.field > span, .field-label, .birth-date-label > label, .category-field legend { font-size: .74rem; font-weight: 680; color: #555149; }
 .field input, .field select, .field textarea {
   width: 100%;
   border: 1px solid rgba(49,45,40,.14);
@@ -203,6 +211,23 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .field input:disabled { opacity: .45; }
 .field small { color: var(--faint); font-size: .64rem; line-height: 1.4; }
 .field em { color: var(--wine); font-size: .62rem; font-style: normal; margin-left: .2rem; }
+.birth-date-group { display: flex; flex-direction: column; }
+.birth-date-label { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.calendar-toggle { display: inline-flex; padding: .16rem; border: 1px solid var(--line-strong); border-radius: 999px; background: rgba(255,255,255,.4); }
+.calendar-toggle label { cursor: pointer; position: relative; }
+.calendar-toggle input {
+  position: absolute;
+  width: 1px;
+  min-height: 1px;
+  padding: 0;
+  opacity: 0;
+  clip-path: inset(50%);
+}
+.calendar-toggle input:focus { box-shadow: none; }
+.calendar-toggle span { display: grid; place-items: center; min-width: 2.75rem; min-height: 1.7rem; padding: 0 .65rem; border-radius: 999px; color: var(--muted); font-size: .66rem; font-weight: 680; transition: color 160ms ease, background 160ms ease; }
+.calendar-toggle input:checked + span { color: var(--paper); background: var(--wine); }
+.calendar-toggle input:focus-visible + span { outline: 2px solid var(--wine); outline-offset: 2px; }
+.check-row.lunar-leap-row { margin: .65rem 0 0; }
 .check-row { display: inline-flex; align-items: center; gap: .5rem; font-size: .7rem; color: var(--muted); margin: .75rem 0 1.6rem; cursor: pointer; position: relative; }
 .check-row input { position: absolute; opacity: 0; }
 .checkmark { width: 1rem; height: 1rem; border: 1px solid var(--line-strong); border-radius: .3rem; display: grid; place-items: center; background: white; }
@@ -374,6 +399,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .close-button { position: absolute; top: .8rem; right: .8rem; width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: rgba(32,32,30,.06); font-size: 1.2rem; font-weight: 300; cursor: pointer; }
 .info-sheet h2 { font-size: 2.2rem; }
 .info-sheet > p:not(.eyebrow):not(.support-note) { color: var(--muted); font-size: .78rem; line-height: 1.75; }
+
+.brand-story { margin: 1.25rem 0; padding: 1.05rem 1.1rem; border-left: 2px solid var(--wine); border-radius: 0 .7rem .7rem 0; background: rgba(113,62,67,.055); }
+.brand-story > span { display: block; margin-bottom: .4rem; color: var(--wine); font-size: .62rem; font-weight: 700; letter-spacing: .08em; }
+.brand-story p { margin: 0; color: var(--muted); font-size: .73rem; line-height: 1.75; }
+.brand-story strong { color: var(--ink); }
 .info-sheet dl { margin: 1.5rem 0; border-top: 1px solid var(--line); }
 .info-sheet dl div { display: grid; grid-template-columns: 7rem 1fr; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--line); font-size: .7rem; }
 .info-sheet dt { font-weight: 680; }
@@ -408,6 +438,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .hero-copy .eyebrow { justify-content: center; }
   .hero-copy h1 { font-size: clamp(3rem, 15vw, 4.2rem); }
   .hero-description { font-size: .84rem; line-height: 1.8; }
+  .brand-definition { grid-template-columns: 1fr; gap: .35rem; margin: -.65rem auto 1.6rem; text-align: left; }
   .desktop-only { display: none; }
   .microcopy { justify-content: center; margin-left: 0; }
   .hero-art { width: 100%; height: 25rem; transform: scale(.74); margin: -1.8rem 0 -2.5rem; }
@@ -498,7 +529,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .brand-mark i:last-child { background: var(--wine); }
   .icon-button, .field input, .field select, .field textarea, .category-grid button, .feedback-box button { background: rgba(255,255,255,.055); }
   .icon-button:hover, .field input:hover, .field select:hover, .field textarea:hover, .category-grid button:hover, .secondary-button:hover { background: rgba(255,255,255,.1); }
-  .field > span, .category-field legend { color: #d0c9bf; }
+  .field > span, .field-label, .birth-date-label > label, .category-field legend { color: #d0c9bf; }
   .field input:focus, .field select:focus, .field textarea:focus { background: rgba(255,255,255,.09); }
   .checkmark { background: #282623; }
   .category-grid button[aria-pressed="true"], .feedback-box button:hover, .feedback-box button.selected { background: rgba(208,154,160,.13); color: #edbdc2; }
@@ -518,6 +549,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .fate-section { background: #0e0e0d; }
   .close-button { background: rgba(255,255,255,.08); }
   .support-note { background: rgba(208,154,160,.1); color: #d9adb2; }
+  .brand-story { background: rgba(208,154,160,.07); }
 }
 
 @media (prefers-reduced-motion: reduce) {

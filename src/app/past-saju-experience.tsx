@@ -52,8 +52,14 @@ const EXAMPLES: Record<EventCategory, { helper: string; placeholder: string }> =
   가족: { helper: "예: 가족을 위해 내 계획을 바꿨던 순간", placeholder: "누구의 잘잘못보다, 당시 내가 놓인 선택을 중심으로 적어주세요." },
   기타: { helper: "오래 마음에 남아 있는 한 번의 갈림길", placeholder: "그때 무엇을 선택했고, 고르지 않은 길은 무엇이었나요?" },
 };
+const CALENDAR_TYPES = [
+  { value: "solar", label: "양력" },
+  { value: "lunar", label: "음력" },
+] as const;
+const BIRTH_CITIES = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "제주", "강릉", "전주"] as const;
+const OTHER_BIRTH_CITY = "기타";
 
-const EMPTY_BIRTH: BirthInput = { date: "", time: "", timeUnknown: false, city: "서울", gender: "응답 안 함" };
+const EMPTY_BIRTH: BirthInput = { date: "", calendarType: "solar", lunarLeapMonth: false, time: "", timeUnknown: false, city: "서울", gender: "응답 안 함" };
 const EMPTY_EVENT: ReadingInput["event"] = { category: "이직", date: "", story: "", outcome: "", alternative: "" };
 const EMPTY_CONTEXT: ReadingInput["context"] = { readiness: 3, freedom: 3, fear: 3 };
 
@@ -73,9 +79,12 @@ function LockIcon({ open = false }: { open?: boolean }) {
 
 function Brand() {
   return (
-    <button className="brand" type="button" aria-label="처음으로" onClick={() => window.location.reload()}>
+    <button className="brand" type="button" aria-label="과거사주 처음으로" onClick={() => window.location.reload()}>
       <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-      <span>가지 않은 운</span>
+      <span className="brand-copy">
+        <strong>과거사주</strong>
+        <small>가지 않은 운</small>
+      </span>
     </button>
   );
 }
@@ -223,6 +232,7 @@ export function PastSajuExperience() {
 
   const step = stage === "birth" ? 1 : stage === "event" ? 2 : stage === "cards" ? 3 : stage === "reading" ? 4 : 0;
   const input = useMemo<ReadingInput>(() => ({ birth, event, context }), [birth, event, context]);
+  const birthCitySelection = BIRTH_CITIES.find((city) => city === birth.city) ?? OTHER_BIRTH_CITY;
 
   function acceptAge() {
     localStorage.setItem("past-saju-age-confirmed", "yes");
@@ -246,8 +256,11 @@ export function PastSajuExperience() {
 
   function submitBirth(eventObject: FormEvent) {
     eventObject.preventDefault();
-    if (!birth.date || (!birth.timeUnknown && !birth.time) || !birth.city) return;
-    localStorage.setItem("past-saju-birth", JSON.stringify(birth));
+    const city = birth.city.trim();
+    if (!birth.date || (!birth.timeUnknown && !birth.time) || !city) return;
+    const normalizedBirth = { ...birth, city };
+    setBirth(normalizedBirth);
+    localStorage.setItem("past-saju-birth", JSON.stringify(normalizedBirth));
     setStage("event");
   }
 
@@ -367,9 +380,13 @@ export function PastSajuExperience() {
       {stage === "landing" && (
         <main className="landing" ref={mainRef} tabIndex={-1}>
           <div className="hero-copy">
-            <p className="eyebrow"><span />사주 결정형 반사실 서사</p>
+            <p className="eyebrow"><span />과거사주의 첫 번째 이야기</p>
             <h1>그때, 다른 길을<br />걸었다면.</h1>
             <p className="hero-description">미래를 점치는 대신, 지나간 운명의 갈림길을 다시 엽니다.<br className="desktop-only" /> 당신의 사주가 고른 세 개의 길 중 하나를 만나보세요.</p>
+            <div className="brand-definition">
+              <strong>과거사주란?</strong>
+              <p>과거를 맞히는 사주가 아니라, 지나온 선택을 통해 지금의 나를 이해하는 사주입니다.</p>
+            </div>
             <button className="primary-button hero-button" type="button" onClick={() => setStage("birth")}>
               지나간 갈림길 열기 <Arrow />
             </button>
@@ -398,12 +415,80 @@ export function PastSajuExperience() {
           </section>
           <form className="input-card" onSubmit={submitBirth}>
             <div className="field-grid two-columns">
-              <label className="field"><span>생년월일</span><input required type="date" value={birth.date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirth({ ...birth, date: e.target.value })} /></label>
+              <div className="birth-date-group">
+                <div className="field">
+                  <div className="birth-date-label">
+                    <label htmlFor="birth-date">생년월일</label>
+                    <div className="calendar-toggle" role="radiogroup" aria-label="달력 기준">
+                      {CALENDAR_TYPES.map(({ value, label }) => (
+                        <label key={value}>
+                          <input
+                            type="radio"
+                            name="calendar-type"
+                            value={value}
+                            checked={birth.calendarType === value}
+                            onChange={() => setBirth((current) => ({
+                              ...current,
+                              calendarType: value,
+                              lunarLeapMonth: value === "lunar" ? current.lunarLeapMonth : false,
+                            }))}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <input
+                    id="birth-date"
+                    required
+                    type="date"
+                    value={birth.date}
+                    max={birth.calendarType === "solar" ? new Date().toISOString().slice(0, 10) : undefined}
+                    onChange={(eventObject) => setBirth((current) => ({ ...current, date: eventObject.target.value }))}
+                  />
+                </div>
+                {birth.calendarType === "lunar" ? (
+                  <label className="check-row lunar-leap-row">
+                    <input
+                      type="checkbox"
+                      checked={birth.lunarLeapMonth}
+                      onChange={(eventObject) => setBirth((current) => ({ ...current, lunarLeapMonth: eventObject.target.checked }))}
+                    />
+                    <span className="checkmark" />
+                    <span>윤달이에요</span>
+                  </label>
+                ) : null}
+              </div>
               <label className="field"><span>태어난 시각</span><input required={!birth.timeUnknown} disabled={birth.timeUnknown} type="time" value={birth.time} onChange={(e) => setBirth({ ...birth, time: e.target.value })} /></label>
             </div>
             <label className="check-row"><input type="checkbox" checked={birth.timeUnknown} onChange={(e) => setBirth({ ...birth, timeUnknown: e.target.checked, time: e.target.checked ? "" : birth.time })} /><span className="checkmark" /><span>태어난 시각을 몰라요</span></label>
             <div className="field-grid two-columns">
-              <label className="field"><span>출생 도시</span><select value={birth.city} onChange={(e) => setBirth({ ...birth, city: e.target.value })}>{["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "제주", "강릉", "전주"].map((city) => <option key={city}>{city}</option>)}</select><small>경도 보정 후 도시 정보는 저장하지 않아요.</small></label>
+              <div className="field">
+                <label className="field-label" htmlFor="birth-city">출생 도시</label>
+                <select
+                  id="birth-city"
+                  value={birthCitySelection}
+                  onChange={(eventObject) => setBirth((current) => ({
+                    ...current,
+                    city: eventObject.target.value === OTHER_BIRTH_CITY ? "" : eventObject.target.value,
+                  }))}
+                >
+                  {BIRTH_CITIES.map((city) => <option key={city} value={city}>{city}</option>)}
+                  <option value={OTHER_BIRTH_CITY}>기타 (직접 입력)</option>
+                </select>
+                {birthCitySelection === OTHER_BIRTH_CITY ? (
+                  <input
+                    aria-label="출생 도시 직접 입력"
+                    required
+                    type="text"
+                    value={birth.city}
+                    placeholder="예: 수원, 춘천"
+                    maxLength={80}
+                    onChange={(eventObject) => setBirth((current) => ({ ...current, city: eventObject.target.value }))}
+                  />
+                ) : null}
+                <small>목록 밖 도시는 한반도 평균 경도로 보정하고 이 브라우저에만 기억해요.</small>
+              </div>
               <label className="field"><span>성별</span><select value={birth.gender} onChange={(e) => setBirth({ ...birth, gender: e.target.value as BirthInput["gender"] })}><option>응답 안 함</option><option>여성</option><option>남성</option></select><small>대운의 흐름 계산에만 사용해요.</small></label>
             </div>
             <div className="form-footer"><span className="privacy-note"><LockIcon /> 브라우저에 안전하게 기억해 둘게요.</span><button className="primary-button" type="submit">다음 <Arrow /></button></div>
@@ -469,7 +554,7 @@ export function PastSajuExperience() {
         </main>
       )}
 
-      <footer className="footer"><span>© 2026 가지 않은 운</span><button type="button" onClick={openInfo}>이용 안내 · 개인정보</button><span>오락과 성찰을 위한 서비스</span></footer>
+      <footer className="footer"><span>© 2026 과거사주</span><button type="button" onClick={openInfo}>이용 안내 · 개인정보</button><span>첫 번째 이야기 · 가지 않은 운</span></footer>
 
       {ageGate === "checking" && <div className="modal-layer age-layer age-checking" aria-label="연령 확인 준비 중"><span className="spinner" /></div>}
 
@@ -477,7 +562,27 @@ export function PastSajuExperience() {
 
       {(ageGate === "open" || ageGate === "blocked") && <div className="modal-layer age-layer"><section ref={ageRef} tabIndex={-1} className="age-gate" role="dialog" aria-modal="true" aria-labelledby="age-title"><span className="age-symbol" aria-hidden="true">十四</span>{ageGate === "open" ? <><p className="eyebrow centered"><span />시작하기 전에</p><h2 id="age-title">만 14세 이상인가요?</h2><p>생년월일과 과거의 이야기를 다루는 서비스예요.<br />만 14세 미만에게는 제공하지 않습니다.</p><button data-autofocus className="primary-button full-button" type="button" onClick={acceptAge}>네, 만 14세 이상이에요</button><button className="sheet-cancel" type="button" onClick={() => setAgeGate("blocked")}>만 14세 미만이에요</button></> : <><h2 id="age-title">지금은 이용할 수 없어요.</h2><p>소중한 정보를 안전하게 지키기 위해 만 14세 이상부터 이용할 수 있습니다.</p></>}</section></div>}
 
-      {showInfo && <div className="modal-layer" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowInfo(false); }}><section ref={infoRef} tabIndex={-1} className="info-sheet" role="dialog" aria-modal="true" aria-labelledby="info-title"><button data-autofocus className="close-button" type="button" aria-label="닫기" onClick={() => setShowInfo(false)}>×</button><p className="eyebrow"><span />알아두세요</p><h2 id="info-title">예언이 아닌,<br />지나간 선택의 성찰입니다.</h2><p>결과는 명리 규칙을 결정론적으로 적용해 만든 반사실 서사이며, 실제로 일어났을 일을 주장하지 않습니다.</p><dl><div><dt>수집 정보</dt><dd>생년월일시, 성별, 과거 사건과 선택</dd></div><div><dt>보관</dt><dd>서버 세션은 최대 7일, 출생 정보 캐시는 이 브라우저에만 저장</dd></div><div><dt>사용하지 않는 것</dt><dd>이름, 연락처, 정확한 주소</dd></div></dl><p className="support-note">죽음·폭력·심각한 사고처럼 마음을 크게 다치게 한 사건은 자동 해석하지 않습니다. 위기 시 자살예방상담 109, 정신건강 위기상담 1577-0199에 연락하세요.</p><button className="secondary-button full-button" type="button" onClick={() => setShowInfo(false)}>확인했어요</button></section></div>}
+      {showInfo && (
+        <div className="modal-layer" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowInfo(false); }}>
+          <section ref={infoRef} tabIndex={-1} className="info-sheet" role="dialog" aria-modal="true" aria-labelledby="info-title">
+            <button data-autofocus className="close-button" type="button" aria-label="닫기" onClick={() => setShowInfo(false)}>×</button>
+            <p className="eyebrow"><span />알아두세요</p>
+            <h2 id="info-title">예언이 아닌,<br />지나간 선택의 성찰입니다.</h2>
+            <div className="brand-story">
+              <span>이름에 담은 뜻</span>
+              <p><strong>과거사주</strong>는 과거를 맞히거나 바꾸는 서비스가 아닙니다. “그때 다른 길을 골랐다면?”이라는 질문으로 지나온 선택을 돌아보고, 지금의 나를 이해할 단서를 찾는 사주 경험입니다.</p>
+            </div>
+            <p>결과는 명리 규칙을 결정론적으로 적용해 만든 반사실 서사이며, 실제로 일어났을 일을 주장하지 않습니다.</p>
+            <dl>
+              <div><dt>수집 정보</dt><dd>생년월일시, 성별, 과거 사건과 선택</dd></div>
+              <div><dt>보관</dt><dd>서버 세션은 7일 뒤 이용이 차단되고 자동 삭제 대상으로 전환, 출생 정보 캐시는 이 브라우저에만 저장</dd></div>
+              <div><dt>사용하지 않는 것</dt><dd>이름, 연락처, 정확한 주소</dd></div>
+            </dl>
+            <p className="support-note">죽음·폭력·심각한 사고처럼 마음을 크게 다치게 한 사건은 자동 해석하지 않습니다. 위기 시 자살예방상담 109, 정신건강 위기상담 1577-0199에 연락하세요.</p>
+            <button className="secondary-button full-button" type="button" onClick={() => setShowInfo(false)}>확인했어요</button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

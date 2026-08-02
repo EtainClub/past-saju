@@ -1,4 +1,4 @@
-import { phaseZeroMetrics, readingSessions } from "@/lib/reading-store";
+import { markReadingCompleted, selectReadingSession } from "@/lib/reading-store";
 
 export const runtime = "nodejs";
 
@@ -16,23 +16,32 @@ export async function POST(request: Request) {
     return Response.json({ code: "invalid-input" }, { status: 400 });
   }
 
-  const session = readingSessions.get(body.sessionId);
-  if (!session) {
+  let selection;
+  try {
+    selection = await selectReadingSession(body.sessionId, body.slot!);
+  } catch (error) {
+    console.error("Firebase 세션 조회 실패", error);
+    return Response.json(
+      { code: "storage-unavailable", message: "기록 저장소에 잠시 연결할 수 없어요. 잠시 뒤 다시 시도해 주세요." },
+      { status: 503 },
+    );
+  }
+
+  if (selection.status === "missing") {
     return Response.json(
       { code: "session-expired", message: "봉인이 만료되었어요. 같은 내용으로 다시 열어 주세요." },
       { status: 404 },
     );
   }
 
-  if (session.selectedSlot !== undefined && session.selectedSlot !== body.slot) {
+  if (selection.status === "conflict") {
     return Response.json(
       { code: "already-selected", message: "이미 한 장을 선택했어요. 그 카드의 결과를 다시 열어드릴게요." },
       { status: 409 },
     );
   }
 
-  if (session.selectedSlot === undefined) phaseZeroMetrics.cardsSelected += 1;
-  session.selectedSlot = body.slot;
+  const session = selection.session;
   const choice = session.choices[body.slot!];
   const result = choice.result;
   const chunks = [
@@ -64,9 +73,10 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`${JSON.stringify(chunk)}\n`));
         await new Promise((resolve) => setTimeout(resolve, chunk.type === "reveal" ? 420 : 240));
       }
-      if (!session.completedAt) {
-        session.completedAt = Date.now();
-        phaseZeroMetrics.readingsCompleted += 1;
+      try {
+        await markReadingCompleted(session.id);
+      } catch (error) {
+        console.error("Firebase 완료 기록 실패", error);
       }
       controller.close();
     },
