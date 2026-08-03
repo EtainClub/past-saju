@@ -79,10 +79,10 @@ function LockIcon({ open = false }: { open?: boolean }) {
 
 function Brand() {
   return (
-    <button className="brand" type="button" aria-label="과거사주 처음으로" onClick={() => window.location.reload()}>
+    <button className="brand" type="button" aria-label="만약사주 처음으로" onClick={() => window.location.reload()}>
       <span className="brand-mark" aria-hidden="true"><i /><i /></span>
       <span className="brand-copy">
-        <strong>과거사주</strong>
+        <strong>만약사주</strong>
         <small>가지 않은 운</small>
       </span>
     </button>
@@ -104,7 +104,7 @@ async function sha256(value: string) {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export function PastSajuExperience() {
+export function IfSajuExperience() {
   const [stage, setStage] = useState<Stage>("landing");
   const [ageGate, setAgeGate] = useState<"checking" | "open" | "accepted" | "blocked">("checking");
   const [birth, setBirth] = useState<BirthInput>(EMPTY_BIRTH);
@@ -135,13 +135,13 @@ export function PastSajuExperience() {
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      const accepted = localStorage.getItem("past-saju-age-confirmed") === "yes";
+      const accepted = localStorage.getItem("ifsaju-age-confirmed") === "yes";
       setAgeGate(accepted ? "accepted" : "open");
-      const cached = localStorage.getItem("past-saju-birth");
+      const cached = localStorage.getItem("ifsaju-birth");
       if (cached) {
         try { setBirth({ ...EMPTY_BIRTH, ...JSON.parse(cached) }); } catch { /* ignore invalid local cache */ }
       }
-      const cachedReading = localStorage.getItem("past-saju-last-reading");
+      const cachedReading = localStorage.getItem("ifsaju-last-reading");
       if (cachedReading) {
         try {
           const reading = JSON.parse(cachedReading) as CachedReading;
@@ -156,8 +156,8 @@ export function PastSajuExperience() {
             setClosing(reading.closing);
             setSealVerified(true);
             setStage("reading");
-          } else localStorage.removeItem("past-saju-last-reading");
-        } catch { localStorage.removeItem("past-saju-last-reading"); }
+          } else localStorage.removeItem("ifsaju-last-reading");
+        } catch { localStorage.removeItem("ifsaju-last-reading"); }
       }
     });
     return () => cancelAnimationFrame(frame);
@@ -227,7 +227,7 @@ export function PastSajuExperience() {
   useEffect(() => {
     if (!session || !reveal || !balance || !basis || !closing || overview.length < 2 || timeline.length < 3) return;
     const cached: CachedReading = { savedAt: Date.now(), session, reveal, overview, timeline, balance, commonFate, basis, closing };
-    localStorage.setItem("past-saju-last-reading", JSON.stringify(cached));
+    localStorage.setItem("ifsaju-last-reading", JSON.stringify(cached));
   }, [balance, basis, closing, commonFate, overview, reveal, session, timeline]);
 
   const step = stage === "birth" ? 1 : stage === "event" ? 2 : stage === "cards" ? 3 : stage === "reading" ? 4 : 0;
@@ -235,7 +235,7 @@ export function PastSajuExperience() {
   const birthCitySelection = BIRTH_CITIES.find((city) => city === birth.city) ?? OTHER_BIRTH_CITY;
 
   function acceptAge() {
-    localStorage.setItem("past-saju-age-confirmed", "yes");
+    localStorage.setItem("ifsaju-age-confirmed", "yes");
     setAgeGate("accepted");
   }
 
@@ -260,7 +260,7 @@ export function PastSajuExperience() {
     if (!birth.date || (!birth.timeUnknown && !birth.time) || !city) return;
     const normalizedBirth = { ...birth, city };
     setBirth(normalizedBirth);
-    localStorage.setItem("past-saju-birth", JSON.stringify(normalizedBirth));
+    localStorage.setItem("ifsaju-birth", JSON.stringify(normalizedBirth));
     setStage("event");
   }
 
@@ -341,7 +341,7 @@ export function PastSajuExperience() {
   }
 
   function resetEvent() {
-    localStorage.removeItem("past-saju-last-reading");
+    localStorage.removeItem("ifsaju-last-reading");
     setEvent(EMPTY_EVENT);
     setContext(EMPTY_CONTEXT);
     setSession(null);
@@ -380,12 +380,12 @@ export function PastSajuExperience() {
       {stage === "landing" && (
         <main className="landing" ref={mainRef} tabIndex={-1}>
           <div className="hero-copy">
-            <p className="eyebrow"><span />과거사주의 첫 번째 이야기</p>
+            <p className="eyebrow"><span />만약사주의 첫 번째 이야기</p>
             <h1>그때, 다른 길을<br />걸었다면.</h1>
             <p className="hero-description">미래를 점치는 대신, 지나간 운명의 갈림길을 다시 엽니다.<br className="desktop-only" /> 당신의 사주가 고른 세 개의 길 중 하나를 만나보세요.</p>
             <div className="brand-definition">
-              <strong>과거사주란?</strong>
-              <p>과거를 맞히는 사주가 아니라, 지나온 선택을 통해 지금의 나를 이해하는 사주입니다.</p>
+              <strong>만약사주란?</strong>
+              <p>“그때 다른 길을 골랐다면?” 지나온 선택을 통해 지금의 나를 이해하는 사주입니다.</p>
             </div>
             <button className="primary-button hero-button" type="button" onClick={() => setStage("birth")}>
               지나간 갈림길 열기 <Arrow />
@@ -554,7 +554,7 @@ export function PastSajuExperience() {
         </main>
       )}
 
-      <footer className="footer"><span>© 2026 과거사주</span><button type="button" onClick={openInfo}>이용 안내 · 개인정보</button><span>첫 번째 이야기 · 가지 않은 운</span></footer>
+      <footer className="footer"><span>© 2026 만약사주</span><button type="button" onClick={openInfo}>이용 안내 · 개인정보</button><span>첫 번째 이야기 · 가지 않은 운</span></footer>
 
       {ageGate === "checking" && <div className="modal-layer age-layer age-checking" aria-label="연령 확인 준비 중"><span className="spinner" /></div>}
 
@@ -570,7 +570,7 @@ export function PastSajuExperience() {
             <h2 id="info-title">예언이 아닌,<br />지나간 선택의 성찰입니다.</h2>
             <div className="brand-story">
               <span>이름에 담은 뜻</span>
-              <p><strong>과거사주</strong>는 과거를 맞히거나 바꾸는 서비스가 아닙니다. “그때 다른 길을 골랐다면?”이라는 질문으로 지나온 선택을 돌아보고, 지금의 나를 이해할 단서를 찾는 사주 경험입니다.</p>
+              <p><strong>만약사주</strong>는 과거를 맞히거나 바꾸는 서비스가 아닙니다. “그때 다른 길을 골랐다면?”이라는 질문으로 지나온 선택을 돌아보고, 지금의 나를 이해할 단서를 찾는 사주 경험입니다.</p>
             </div>
             <p>결과는 명리 규칙을 결정론적으로 적용해 만든 반사실 서사이며, 실제로 일어났을 일을 주장하지 않습니다.</p>
             <dl>

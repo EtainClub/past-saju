@@ -1,5 +1,5 @@
-import { PastSajuExperience } from "./past-saju-experience";
+import { IfSajuExperience } from "./if-saju-experience";
 
 export default function Home() {
-  return <PastSajuExperience />;
+  return <IfSajuExperience />;
 }

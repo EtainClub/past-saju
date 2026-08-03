@@ -1,5 +1,5 @@
 # Firebase App Hosting runtime configuration.
-# Backend: past-saju (project: pastsaju, region: asia-east1)
+# Backend: ifsaju (project: pastsaju, region: asia-east1)
 # The backend association itself is managed by Firebase, not by this file.
 runConfig:
   minInstances: 0
