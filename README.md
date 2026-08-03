@@ -58,6 +58,10 @@ gcloud firestore fields ttls update expiresAt --collection-group=readingFeedback
 
 개발 환경은 Firebase 변수가 없으면 메모리 저장소로 동작합니다. 운영 환경은 Firestore 연결 실패 시 메모리로 조용히 대체하지 않고 503을 반환합니다.
 
+## 로드맵
+
+마일스톤·리스크·지표는 [docs/ROADMAP.md](docs/ROADMAP.md)에 정리되어 있습니다.
+
 ## 현재 구현
 
 - 만 14세 이상 연령 게이트
