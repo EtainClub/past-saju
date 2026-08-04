@@ -108,6 +108,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   font-weight: 500;
   letter-spacing: -.06em;
   text-wrap: balance;
+  word-break: keep-all;
 }
 .hero-description { color: var(--muted); line-height: 1.95; margin: 2rem 0 2.3rem; font-size: .98rem; }
 
