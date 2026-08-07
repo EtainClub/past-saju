@@ -4,13 +4,14 @@ import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useE
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
 
 type Stage = "landing" | "birth" | "event" | "cards" | "reading";
+type CardSlot = 0 | 1 | 2;
 type SessionEnvelope = {
   sessionId: string;
   choiceCommitments: string[];
   sessionCommitment: string;
 };
 type Reveal = {
-  slot: number;
+  slot: CardSlot;
   choiceId: string;
   title: string;
   choiceText: string;
@@ -62,6 +63,50 @@ const OTHER_BIRTH_CITY = "기타";
 const EMPTY_BIRTH: BirthInput = { date: "", calendarType: "solar", lunarLeapMonth: false, time: "", timeUnknown: false, city: "서울", gender: "응답 안 함" };
 const EMPTY_EVENT: ReadingInput["event"] = { category: "이직", date: "", story: "", outcome: "", alternative: "" };
 const EMPTY_CONTEXT: ReadingInput["context"] = { readiness: 3, freedom: 3, fear: 3 };
+const CARD_SLOTS: readonly CardSlot[] = [0, 1, 2];
+
+const CARD_SIGILS = [
+  <svg key="fork" aria-hidden="true" className="card-sigil" viewBox="0 0 100 100">
+    <circle className="sigil-halo" cx="50" cy="50" r="31" />
+    <circle className="sigil-faint" cx="50" cy="50" r="22" />
+    <path className="sigil-line" d="M50 20v30M50 50 31 72M50 50l19 22" />
+    <path className="sigil-faint" d="M24 50h52" />
+    <circle className="sigil-node" cx="50" cy="50" r="3.6" />
+    <circle className="sigil-node subtle" cx="31" cy="72" r="2" />
+    <circle className="sigil-node subtle" cx="69" cy="72" r="2" />
+  </svg>,
+  <svg key="orbit" aria-hidden="true" className="card-sigil" viewBox="0 0 100 100">
+    <circle className="sigil-halo" cx="50" cy="50" r="27" />
+    <ellipse className="sigil-line" cx="50" cy="50" rx="37" ry="14" transform="rotate(-28 50 50)" />
+    <ellipse className="sigil-faint" cx="50" cy="50" rx="37" ry="14" transform="rotate(28 50 50)" />
+    <path className="sigil-faint" d="M50 18v64" />
+    <circle className="sigil-node" cx="50" cy="50" r="3.6" />
+    <circle className="sigil-node subtle" cx="50" cy="23" r="2" />
+  </svg>,
+  <svg key="resolve" aria-hidden="true" className="card-sigil" viewBox="0 0 100 100">
+    <path className="sigil-halo" d="m50 18 30 32-30 32-30-32Z" />
+    <circle className="sigil-faint" cx="50" cy="50" r="23" />
+    <path className="sigil-line" d="M28 50c10-19 34-19 44 0-10 19-34 19-44 0Z" />
+    <path className="sigil-faint" d="M50 21v58M25 50h50" />
+    <circle className="sigil-node" cx="50" cy="50" r="3.6" />
+    <circle className="sigil-node subtle" cx="50" cy="27" r="2" />
+    <circle className="sigil-node subtle" cx="50" cy="73" r="2" />
+  </svg>,
+] as const;
+
+function CardArtwork({ slot }: { slot: CardSlot }) {
+  return (
+    <>
+      <span className="card-frame" aria-hidden="true" />
+      {CARD_SIGILS[slot]}
+      <span className="card-wordmark" aria-hidden="true">만약사주</span>
+    </>
+  );
+}
+
+function cardVariant(slot: CardSlot) {
+  return `card-variant-${slot + 1}`;
+}
 
 function Arrow({ direction = "right" }: { direction?: "left" | "right" }) {
   return <span aria-hidden="true" className={`arrow-icon ${direction === "left" ? "arrow-left" : ""}`}>→</span>;
@@ -112,7 +157,8 @@ export function IfSajuExperience() {
   const [context, setContext] = useState(EMPTY_CONTEXT);
   const [showOptional, setShowOptional] = useState(false);
   const [session, setSession] = useState<SessionEnvelope | null>(null);
-  const [candidate, setCandidate] = useState<number | null>(null);
+  const [candidate, setCandidate] = useState<CardSlot | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<CardSlot | null>(null);
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [overview, setOverview] = useState<string[]>([]);
   const [timeline, setTimeline] = useState<ReadingResult["timeline"]>([]);
@@ -148,6 +194,7 @@ export function IfSajuExperience() {
           if (Date.now() - reading.savedAt < 7 * 24 * 60 * 60 * 1000) {
             setSession(reading.session);
             setReveal(reading.reveal);
+            setSelectedSlot(reading.reveal.slot);
             setOverview(reading.overview);
             setTimeline(reading.timeline);
             setBalance(reading.balance);
@@ -244,7 +291,7 @@ export function IfSajuExperience() {
     setShowInfo(true);
   }
 
-  function previewCard(slot: number, eventObject: ReactMouseEvent<HTMLButtonElement>) {
+  function previewCard(slot: CardSlot, eventObject: ReactMouseEvent<HTMLButtonElement>) {
     const rect = eventObject.currentTarget.getBoundingClientRect();
     openerRef.current = eventObject.currentTarget;
     setSheetOrigin({
@@ -294,6 +341,7 @@ export function IfSajuExperience() {
   async function openCard() {
     if (candidate === null || !session || isStreaming) return;
     const slot = candidate;
+    setSelectedSlot(slot);
     setCandidate(null);
     setStage("reading");
     setIsStreaming(true);
@@ -345,6 +393,7 @@ export function IfSajuExperience() {
     setEvent(EMPTY_EVENT);
     setContext(EMPTY_CONTEXT);
     setSession(null);
+    setSelectedSlot(null);
     setReveal(null);
     setOverview([]);
     setTimeline([]);
@@ -394,9 +443,9 @@ export function IfSajuExperience() {
           </div>
           <div className="hero-art" aria-hidden="true">
             <div className="orbit orbit-one" /><div className="orbit orbit-two" />
-            <div className="hero-card card-back back-left"><span className="card-sigil"><i /><i /><b /></span></div>
-            <div className="hero-card card-back back-center"><span className="card-sigil"><i /><i /><b /></span></div>
-            <div className="hero-card card-back back-right"><span className="card-sigil"><i /><i /><b /></span></div>
+            <div className={`hero-card card-back back-left ${cardVariant(0)}`}><CardArtwork slot={0} /></div>
+            <div className={`hero-card card-back back-center ${cardVariant(1)}`}><CardArtwork slot={1} /></div>
+            <div className={`hero-card card-back back-right ${cardVariant(2)}`}><CardArtwork slot={2} /></div>
             <span className="star star-one">✦</span><span className="star star-two">·</span><span className="star star-three">✧</span>
           </div>
           <div className="how-it-works" aria-label="이용 순서">
@@ -524,7 +573,7 @@ export function IfSajuExperience() {
           <h1>마음이 가는 한 장을<br />골라주세요.</h1>
           <p className="cards-intro">각 카드에는 사주가 고른 서로 다른 길이 봉인되어 있습니다.<br />생각보다 먼저 닿는 쪽을 선택해 보세요.</p>
           <div className="sealed-cards" role="group" aria-label="봉인된 카드 세 장">
-            {[0, 1, 2].map((slot) => <button className="sealed-card card-back" key={slot} type="button" onClick={(eventObject) => previewCard(slot, eventObject)} aria-label={`${slot + 1}번째 봉인 카드 선택`}><span className="card-number">0{slot + 1}</span><span className="card-sigil"><i /><i /><b /></span><span className="card-prompt">이 길을 열어보기</span></button>)}
+            {CARD_SLOTS.map((slot) => <button className={`sealed-card card-back ${cardVariant(slot)}`} key={slot} type="button" onClick={(eventObject) => previewCard(slot, eventObject)} aria-label={`${slot + 1}번째 봉인 카드 선택`}><span className="card-number">0{slot + 1}</span><CardArtwork slot={slot} /><span className="card-prompt">이 길을 열어보기</span></button>)}
           </div>
           <p className="seal-note"><span className={sealVerified ? "seal-dot verified" : "seal-dot"} /> {sealVerified ? "세 장은 선택 전에 봉인되었습니다" : "봉인을 확인하고 있습니다"}</p>
           <button className="text-button" type="button" onClick={() => setStage("event")}><Arrow direction="left" /> 이야기를 조금 고칠래요</button>
@@ -534,7 +583,7 @@ export function IfSajuExperience() {
       {stage === "reading" && (
         <main className="reading-page" ref={mainRef} tabIndex={-1}>
           <section className={`reveal-hero ${reveal ? "is-revealed" : ""}`}>
-            <div className="selected-stack" aria-hidden="true"><span /><span /><div className="selected-card"><span className="card-sigil"><i /><i /><b /></span></div></div>
+            <div className={`selected-stack ${cardVariant(selectedSlot ?? reveal?.slot ?? 0)}`} aria-hidden="true"><span /><span /><div className="selected-card"><CardArtwork slot={selectedSlot ?? reveal?.slot ?? 0} /></div></div>
             <div className="reveal-copy">
               <p className="eyebrow"><span />당신이 고른 길</p>
               {reveal ? <><div className="axis-chip">{reveal.choiceAxis}의 흐름</div><h1>{reveal.title}</h1><p className="choice-quote">“{reveal.choiceText}”</p><span className="verified-label"><LockIcon open /> {sealVerified ? "선택 전 봉인과 일치해요" : "봉인을 확인하는 중이에요"}</span></> : <><div className="streaming-kicker"><span className="spinner" /> 봉인을 여는 중</div><h1 className="ghost-title">선택한 길이<br />모습을 드러냅니다.</h1></>}
@@ -558,7 +607,7 @@ export function IfSajuExperience() {
 
       {ageGate === "checking" && <div className="modal-layer age-layer age-checking" aria-label="연령 확인 준비 중"><span className="spinner" /></div>}
 
-      {candidate !== null && <div className="modal-layer" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setCandidate(null); }}><section ref={decisionRef} tabIndex={-1} className="decision-sheet" style={{ "--sheet-x": `${sheetOrigin.x}px`, "--sheet-y": `${sheetOrigin.y}px` } as CSSProperties} role="dialog" aria-modal="true" aria-labelledby="decision-title"><span className="sheet-handle" /><div className="mini-card card-back"><span className="card-sigil"><i /><i /><b /></span></div><p className="eyebrow centered"><span />마지막 확인</p><h2 id="decision-title">이 카드를 열까요?</h2><p>선택하면 다른 두 장은 열리지 않습니다.<br />고른 카드는 끝까지 바뀌지 않아요.</p><button data-autofocus className="primary-button full-button" type="button" onClick={openCard}>이 길을 열어볼게요 <Arrow /></button><button className="sheet-cancel" type="button" onClick={() => setCandidate(null)}>조금 더 생각할게요</button></section></div>}
+      {candidate !== null && <div className="modal-layer" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setCandidate(null); }}><section ref={decisionRef} tabIndex={-1} className="decision-sheet" style={{ "--sheet-x": `${sheetOrigin.x}px`, "--sheet-y": `${sheetOrigin.y}px` } as CSSProperties} role="dialog" aria-modal="true" aria-labelledby="decision-title"><span className="sheet-handle" /><div className={`mini-card card-back ${cardVariant(candidate)}`}><CardArtwork slot={candidate} /></div><p className="eyebrow centered"><span />마지막 확인</p><h2 id="decision-title">이 카드를 열까요?</h2><p>선택하면 다른 두 장은 열리지 않습니다.<br />고른 카드는 끝까지 바뀌지 않아요.</p><button data-autofocus className="primary-button full-button" type="button" onClick={openCard}>이 길을 열어볼게요 <Arrow /></button><button className="sheet-cancel" type="button" onClick={() => setCandidate(null)}>조금 더 생각할게요</button></section></div>}
 
       {(ageGate === "open" || ageGate === "blocked") && <div className="modal-layer age-layer"><section ref={ageRef} tabIndex={-1} className="age-gate" role="dialog" aria-modal="true" aria-labelledby="age-title"><span className="age-symbol" aria-hidden="true">十四</span>{ageGate === "open" ? <><p className="eyebrow centered"><span />시작하기 전에</p><h2 id="age-title">만 14세 이상인가요?</h2><p>생년월일과 과거의 이야기를 다루는 서비스예요.<br />만 14세 미만에게는 제공하지 않습니다.</p><button data-autofocus className="primary-button full-button" type="button" onClick={acceptAge}>네, 만 14세 이상이에요</button><button className="sheet-cancel" type="button" onClick={() => setAgeGate("blocked")}>만 14세 미만이에요</button></> : <><h2 id="age-title">지금은 이용할 수 없어요.</h2><p>소중한 정보를 안전하게 지키기 위해 만 14세 이상부터 이용할 수 있습니다.</p></>}</section></div>}
 

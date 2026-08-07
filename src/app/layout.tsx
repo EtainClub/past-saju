@@ -7,11 +7,17 @@ export const metadata: Metadata = {
   description: "“그때 다른 길을 골랐다면?” 지나온 선택을 통해 지금의 나를 이해하는 사주 경험. 사주가 고른 세 개의 길 중 하나를 열어 가지 않은 3년을 읽습니다.",
   applicationName: "만약사주",
   alternates: { canonical: "/" },
+  formatDetection: { telephone: false },
   openGraph: {
     type: "website",
     siteName: "만약사주",
     url: "/",
     locale: "ko_KR",
+    title: "만약사주 — 가지 않은 운",
+    description: "“그때 다른 길을 골랐다면?” 사주가 고른 세 개의 길 중 하나를 열어 가지 않은 3년을 읽습니다.",
+  },
+  twitter: {
+    card: "summary_large_image",
     title: "만약사주 — 가지 않은 운",
     description: "“그때 다른 길을 골랐다면?” 사주가 고른 세 개의 길 중 하나를 열어 가지 않은 3년을 읽습니다.",
   },

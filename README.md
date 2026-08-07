@@ -58,6 +58,58 @@ gcloud firestore fields ttls update expiresAt --collection-group=readingFeedback
 
 개발 환경은 Firebase 변수가 없으면 메모리 저장소로 동작합니다. 운영 환경은 Firestore 연결 실패 시 메모리로 조용히 대체하지 않고 503을 반환합니다.
 
+## 배포
+
+운영 서비스는 Firebase App Hosting에 배포합니다.
+
+| 항목 | 값 |
+| --- | --- |
+| Firebase 프로젝트 | `pastsaju` |
+| App Hosting 백엔드 | `past-saju` |
+| 리전 | `asia-east1` |
+| 배포 브랜치 | `main` |
+| 서비스 URL | `https://ifsaju.com` |
+| App Hosting 기본 URL | `https://past-saju--pastsaju.asia-east1.hosted.app` |
+
+처음 배포하는 환경에서는 Node.js 22 이상, pnpm 11.13.0, Firebase CLI가 필요합니다. Firebase에 로그인하고 현재 저장소가 올바른 프로젝트와 백엔드를 가리키는지 확인합니다.
+
+```bash
+firebase login
+firebase use pastsaju
+firebase apphosting:backends:get past-saju --project pastsaju
+```
+
+배포 전에는 로컬 검증을 모두 통과시킵니다.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm test
+pnpm build
+```
+
+App Hosting 콘솔에서 자동 롤아웃이 활성화되어 있으면 `main` 브랜치에 푸시한 커밋이 자동으로 빌드·배포됩니다. 작업 디렉터리의 커밋되지 않은 변경은 배포되지 않습니다.
+
+```bash
+git push origin main
+```
+
+자동 롤아웃을 기다리지 않고 GitHub의 `main` 최신 커밋을 수동 배포하려면 다음 명령을 실행합니다.
+
+```bash
+firebase apphosting:rollouts:create past-saju --git-branch main --project pastsaju
+```
+
+진행 상태와 빌드 로그는 Firebase Console의 **App Hosting → past-saju → Rollouts**에서 확인합니다. 완료 후 두 공개 주소의 응답을 확인합니다.
+
+```bash
+curl --fail --head https://ifsaju.com
+curl --fail --head https://past-saju--pastsaju.asia-east1.hosted.app
+```
+
+App Hosting 롤아웃은 Firestore 규칙·인덱스·TTL 정책을 대신 배포하지 않습니다. 해당 파일이나 정책을 변경했다면 위 Firebase 절의 `firebase deploy`와 `gcloud firestore fields ttls update` 명령도 별도로 실행합니다. 운영 런타임은 Application Default Credentials를 사용하므로 서비스 계정 키 파일이나 `.env.local`을 배포 커밋에 포함하지 않습니다.
+
 ## 로드맵
 
 마일스톤·리스크·지표는 [docs/ROADMAP.md](docs/ROADMAP.md)에 정리되어 있습니다.
