@@ -71,6 +71,10 @@ function initializeFirebaseAdmin(): App {
   });
 }
 
+export function getFirebaseAdminApp() {
+  return initializeFirebaseAdmin();
+}
+
 export function getFirebaseAdminFirestore() {
   firestore ??= getFirestore(initializeFirebaseAdmin());
   return firestore;

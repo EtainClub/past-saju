@@ -20,8 +20,11 @@ import type {
   TurningPoint,
 } from "./reading-types";
 import { resolveSolarBirthDate } from "./birth-date";
-
-const AXES: TenGodAxis[] = ["식상", "관성", "재성", "인성", "비겁"];
+import { AXES, axisFromTenGod } from "./ten-god-axis";
+import { classifyFork } from "./fork/classify";
+import { forkBias } from "./fork/bias";
+import { DOMAINS, POLE_LABEL } from "./fork/ontology";
+import type { AxisBias, ForkResult } from "./fork/types";
 const DOMAIN_BY_AXIS: Record<TenGodAxis, Domain> = {
   식상: "학습·내면",
   관성: "직업·명예",
@@ -64,6 +67,7 @@ type EngineContext = {
   turningPoints: TurningPoint[];
   invariant: NarrativeSpec["invariantTheme"];
   hourConfidence: NarrativeSpec["confidence"]["hourPillar"];
+  fork: ForkResult;
 };
 
 const CHOICE_COPY: Record<TenGodAxis, { title: string; phrase: string }> = {
@@ -126,14 +130,6 @@ function hash(input: string) {
   return createHash("sha256").update(input).digest("hex");
 }
 
-function axisFromTenGod(god: TenGod): TenGodAxis {
-  if (god === "비견" || god === "겁재") return "비겁";
-  if (god === "식신" || god === "상관") return "식상";
-  if (god === "편재" || god === "정재") return "재성";
-  if (god === "편관" || god === "정관") return "관성";
-  return "인성";
-}
-
 function equationOfTime(date: Date) {
   const start = Date.UTC(date.getUTCFullYear(), 0, 0);
   const day = Math.floor((date.getTime() - start) / 86_400_000);
@@ -163,6 +159,14 @@ function hourConfidenceNote(confidence: NarrativeSpec["confidence"]["hourPillar"
   if (confidence === "unknown") return "태어난 시간을 몰라 시주를 명세에서 제외했어요.";
   if (confidence === "boundary") return "진태양시가 시주 경계에 가까워, 시간에서 온 해석은 낮춰 반영했어요.";
   return "출생지를 진태양시로 보정했고, 시주 경계와 충분히 떨어져 있어요.";
+}
+
+function forkNote(fork: ForkResult) {
+  if (fork.status !== "CLASSIFIED") {
+    return "적어 주신 이야기에서 갈림길의 방향을 확정하지 못해, 명식과 운의 흐름만으로 읽었어요.";
+  }
+  const { domain, actualChoice, counterfactual } = fork.frame.key;
+  return `적어 주신 이야기를 ${DOMAINS[domain].label}의 갈림길로 읽었고, ${POLE_LABEL[actualChoice]}을 택하셨다고 보아 ${POLE_LABEL[counterfactual]}을 이 카드에 반영했어요.`;
 }
 
 function calculateChart(input: ReadingInput) {
@@ -206,7 +210,19 @@ function calculateStrength(chart: FourPillarsDetail, timeUnknown: boolean) {
   return Math.round(40 * deukRyeong + 25 * deukJi + 25 * deukSe + seasonCorrection);
 }
 
-function rankedAxes(chart: FourPillarsDetail, strengthScore: number, timeUnknown: boolean, activeLuck: Pillar | null) {
+/**
+ * 십신 축 순위.
+ *
+ * 갈림길 편향(bias)은 **카드 축 선택에만** 반영한다.
+ * 용신·기신은 명식 판정이므로 갈림길이 바꾸면 안 된다 — L1/L2 경계.
+ */
+function rankedAxes(
+  chart: FourPillarsDetail,
+  strengthScore: number,
+  timeUnknown: boolean,
+  activeLuck: Pillar | null,
+  bias: AxisBias,
+) {
   const scores = new Map<TenGodAxis, number>(AXES.map((axis) => [axis, 0]));
   const gods: Array<{ god: TenGod; weight: number }> = [
     { god: chart.tenGods.year.stem, weight: 1 }, { god: chart.tenGods.year.branch, weight: 1 },
@@ -229,8 +245,13 @@ function rankedAxes(chart: FourPillarsDetail, strengthScore: number, timeUnknown
   const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
   const usefulPool: TenGodAxis[] = strengthScore >= 55 ? ["식상", "재성", "관성"] : strengthScore < 45 ? ["인성", "비겁"] : ranked.slice(0, 2).map(([axis]) => axis);
   const hostilePool: TenGodAxis[] = strengthScore >= 55 ? ["비겁", "인성"] : strengthScore < 45 ? ["식상", "재성", "관성"] : ranked.slice(-2).map(([axis]) => axis);
+  const biased = new Map(scores);
+  for (const [axis, delta] of Object.entries(bias) as Array<[TenGodAxis, number]>) {
+    biased.set(axis, (biased.get(axis) ?? 0) + delta);
+  }
+  const cardRanked = [...biased.entries()].sort((a, b) => b[1] - a[1]);
   return {
-    axes: ranked.slice(0, 3).map(([axis]) => axis),
+    axes: cardRanked.slice(0, 3).map(([axis]) => axis),
     usefulAxes: usefulPool.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)),
     hostileAxes: hostilePool.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)),
   };
@@ -313,7 +334,7 @@ function invariantFromChart(chart: FourPillarsDetail, timeUnknown: boolean, host
   };
 }
 
-function buildEngineContext(input: ReadingInput): EngineContext {
+function buildEngineContext(input: ReadingInput, resolvedFork?: ForkResult): EngineContext {
   const chart = calculateChart(input);
   const strengthScore = calculateStrength(chart, input.birth.timeUnknown);
   const [eventYear, eventMonth] = input.event.date.split("-").map(Number);
@@ -326,7 +347,12 @@ function buildEngineContext(input: ReadingInput): EngineContext {
   const daeunTransition = Boolean(luck && Math.abs(eventAge - nearestBoundary) <= 1.5);
   const luckIndex = luck && eventAge >= preciseStart ? Math.min(luck.pillars.length - 1, Math.floor((eventAge - preciseStart) / 10)) : -1;
   const activeLuck = luckIndex >= 0 && luck ? luck.pillars[luckIndex] : null;
-  const ranking = rankedAxes(chart, strengthScore, input.birth.timeUnknown, activeLuck?.pillar ?? null);
+  // L2 — 갈림길을 유한 심볼로 접는다. 미분류면 편향 없이 명식만으로 간다(임의 기본값 금지).
+  // L2는 라우트 경계에서 이미 해결된다(resolveFork). 없으면 패턴만으로 동기 분류한다.
+  // 어느 쪽이든 이 함수는 순수 동기로 남는다 — L1~L4 결정론 원칙.
+  const fork = resolvedFork ?? classifyFork(input);
+  const bias: AxisBias = fork.status === "CLASSIFIED" ? forkBias(fork.frame.key, chart) : {};
+  const ranking = rankedAxes(chart, strengthScore, input.birth.timeUnknown, activeLuck?.pillar ?? null, bias);
   const hourConfidence = hourConfidenceBand(input);
   const daeunLabel = activeLuck
     ? `${activeLuck.korean} 대운 ${Math.max(1, Math.floor(eventAge - (preciseStart + luckIndex * 10)) + 1)}년차${daeunTransition ? " · 교체기" : ""}`
@@ -343,6 +369,7 @@ function buildEngineContext(input: ReadingInput): EngineContext {
     turningPoints: buildTurningPoints(input, chart, ranking.usefulAxes, ranking.hostileAxes, daeunTransition),
     invariant: invariantFromChart(chart, input.birth.timeUnknown, ranking.hostileAxes),
     hourConfidence,
+    fork,
   };
 }
 
@@ -514,7 +541,7 @@ function resultFor(axis: TenGodAxis, input: ReadingInput, context: EngineContext
       strength,
       daeun: context.daeunLabel,
       usefulFlow: `용신 축 ${context.usefulAxes.join("·")} · 기신 축 ${context.hostileAxes.join("·")}`,
-      eventFlow: `사건 시점은 ${spec.fortunePhase} 국면으로 읽히며, ${primary} 영역의 움직임을 가장 크게 반영했어요.`,
+      eventFlow: `사건 시점은 ${spec.fortunePhase} 국면으로 읽히며, ${primary} 영역의 움직임을 가장 크게 반영했어요. ${forkNote(context.fork)}`,
       turningPointsUsed: spec.turningPoints.map((point) => ({ monthOffset: point.monthOffset, label: `${point.domain} ${point.relation}` })),
       realityContext: realityNote,
       hourPillarNote: hourConfidenceNote(context.hourConfidence),
@@ -550,9 +577,16 @@ export function classifySafety(input: ReadingInput) {
   return blocked.some((word) => text.includes(word));
 }
 
-export function createReadingSession(input: ReadingInput): ReadingSession {
+/**
+ * 순수 동기 함수. 동일 입력 + 동일 fork는 동일 심볼릭 출력을 낸다.
+ * (카드 슬롯 배치만 난수 — 봉인 UX상 위치 예측 불가가 목적)
+ *
+ * fork를 넘기지 않으면 패턴 매칭만 쓴다. LLM 폴백까지 쓰려면
+ * 호출부가 await resolveFork(input) 후 결과를 넘긴다.
+ */
+export function createReadingSession(input: ReadingInput, resolvedFork?: ForkResult): ReadingSession {
   const id = randomUUID();
-  const context = buildEngineContext(input);
+  const context = buildEngineContext(input, resolvedFork);
   const axes = context.axes
     .map((axis) => ({ axis, rank: randomBytes(4).readUInt32BE(0) }))
     .sort((a, b) => a.rank - b.rank)

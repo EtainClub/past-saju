@@ -11,10 +11,12 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc scripts/engine-fixtures.ts scripts/store-fixtures.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --esModuleInterop --skipLibCheck && node .test-dist/scripts/engine-fixtures.js && node .test-dist/scripts/store-fixtures.js",
+    "test": "tsc scripts/engine-fixtures.ts scripts/store-fixtures.ts scripts/fork-fixtures.ts scripts/guard-fixtures.ts scripts/l2-fixtures.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --lib ES2022,DOM --esModuleInterop --skipLibCheck && node .test-dist/scripts/engine-fixtures.js && node .test-dist/scripts/fork-fixtures.js && node .test-dist/scripts/guard-fixtures.js && node .test-dist/scripts/l2-fixtures.js && node .test-dist/scripts/store-fixtures.js",
     "test:firebase": "node --env-file=.env.local scripts/firebase-smoke.cjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.117.1",
+    "firebase": "12.17.1",
     "firebase-admin": "^14.2.0",
     "manseryeok": "^2.0.0",
     "next": "16.2.12",

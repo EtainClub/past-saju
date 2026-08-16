@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
+import { appCheckHeaders, warmAppCheck } from "@/lib/firebase-client";
 
 type Stage = "landing" | "birth" | "event" | "cards" | "reading";
 type CardSlot = 0 | 1 | 2;
@@ -179,6 +181,9 @@ export function IfSajuExperience() {
   const infoRef = useRef<HTMLElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
+  // App Check 토큰을 미리 받아 두면 첫 API 호출의 지연이 줄어든다.
+  useEffect(() => { warmAppCheck(); }, []);
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const accepted = localStorage.getItem("ifsaju-age-confirmed") === "yes";
@@ -319,7 +324,7 @@ export function IfSajuExperience() {
     try {
       const response = await fetch("/api/reading/session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await appCheckHeaders()) },
         body: JSON.stringify(input),
       });
       const data = await response.json();
@@ -349,7 +354,7 @@ export function IfSajuExperience() {
     try {
       const response = await fetch("/api/reading/stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await appCheckHeaders()) },
         body: JSON.stringify({ sessionId: session.sessionId, slot }),
       });
       if (!response.ok || !response.body) {
@@ -409,7 +414,7 @@ export function IfSajuExperience() {
   async function sendFeedback(value: string) {
     if (!session || feedback) return;
     setFeedback(value);
-    await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
+    await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json", ...(await appCheckHeaders()) }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
   }
 
   return (
@@ -603,7 +608,7 @@ export function IfSajuExperience() {
         </main>
       )}
 
-      <footer className="footer"><span>© 2026 만약사주</span><button type="button" onClick={openInfo}>이용 안내 · 개인정보</button><span>첫 번째 이야기 · 가지 않은 운</span></footer>
+      <footer className="footer"><span>© 2026 만약사주</span><button type="button" onClick={openInfo}>이용 안내</button><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용약관</Link><span>첫 번째 이야기 · 가지 않은 운</span></footer>
 
       {ageGate === "checking" && <div className="modal-layer age-layer age-checking" aria-label="연령 확인 준비 중"><span className="spinner" /></div>}
 
@@ -627,6 +632,7 @@ export function IfSajuExperience() {
               <div><dt>보관</dt><dd>서버 세션은 7일 뒤 이용이 차단되고 자동 삭제 대상으로 전환, 출생 정보 캐시는 이 브라우저에만 저장</dd></div>
               <div><dt>사용하지 않는 것</dt><dd>이름, 연락처, 정확한 주소</dd></div>
             </dl>
+            <p className="legal-links"><Link href="/privacy">개인정보처리방침 전문</Link> · <Link href="/terms">이용약관 전문</Link></p>
             <p className="support-note">죽음·폭력·심각한 사고처럼 마음을 크게 다치게 한 사건은 자동 해석하지 않습니다. 위기 시 자살예방상담 109, 정신건강 위기상담 1577-0199에 연락하세요.</p>
             <button className="secondary-button full-button" type="button" onClick={() => setShowInfo(false)}>확인했어요</button>
           </section>

@@ -2,6 +2,10 @@ import { classifySafety, createReadingSession } from "@/lib/reading-engine";
 import { resolveSolarBirthDate } from "@/lib/birth-date";
 import { readingStoreBackend, saveReadingSession } from "@/lib/reading-store";
 import type { BirthInput, ReadingInput } from "@/lib/reading-types";
+import { appCheckResponse, verifyAppCheck } from "@/lib/app-check";
+import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { clientKey, readBoundedBody } from "@/lib/request-guard";
+import { resolveFork } from "@/lib/fork/resolve";
 
 export const runtime = "nodejs";
 
@@ -51,9 +55,21 @@ function ageFromBirth(birthInput: BirthInput) {
 }
 
 export async function POST(request: Request) {
+  const blocked = appCheckResponse(await verifyAppCheck(request), "reading/session");
+  if (blocked) return blocked;
+
+  const verdict = await consumeRateLimit("session", clientKey(request));
+  if (!verdict.ok) return rateLimitResponse(verdict);
+
+  const body = await readBoundedBody(request);
+  if (body.status === "too-large") {
+    return Response.json({ code: "payload-too-large", message: "입력이 너무 깁니다. 줄여서 다시 시도해 주세요." }, { status: 413 });
+  }
+
   let input: unknown;
   try {
-    input = await request.json();
+    if (body.status !== "ok") throw new Error("unreadable");
+    input = JSON.parse(body.text);
   } catch {
     return Response.json({ code: "invalid-input", message: "입력 내용을 다시 확인해 주세요." }, { status: 400 });
   }
@@ -77,7 +93,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const session = createReadingSession(input);
+  // L2 — 갈림길 이해. classifySafety 통과 이후에만 호출한다.
+  // 차단 대상 서술은 외부로 나가지 않는다.
+  const fork = await resolveFork(input);
+  const session = createReadingSession(input, fork);
   try {
     await saveReadingSession(session);
   } catch (error) {

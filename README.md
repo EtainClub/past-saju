@@ -48,15 +48,52 @@ firebase emulators:start --only firestore
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 pnpm dev
 ```
 
-규칙·인덱스와 7일 만료 문서의 TTL 설정은 다음 명령으로 배포합니다.
+규칙·인덱스와 만료 문서의 TTL 설정은 다음 명령으로 배포합니다. `rateLimits`는 속도 제한 카운터로, 윈도가 끝나면 자동 삭제됩니다.
 
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes --project pastsaju
 gcloud firestore fields ttls update expiresAt --collection-group=readingSessions --enable-ttl --project=pastsaju --database='(default)'
 gcloud firestore fields ttls update expiresAt --collection-group=readingFeedback --enable-ttl --project=pastsaju --database='(default)'
+gcloud firestore fields ttls update expiresAt --collection-group=rateLimits --enable-ttl --project=pastsaju --database='(default)'
+gcloud firestore fields ttls update expiresAt --collection-group=forkUnknowns --enable-ttl --project=pastsaju --database='(default)'
 ```
 
 개발 환경은 Firebase 변수가 없으면 메모리 저장소로 동작합니다. 운영 환경은 Firestore 연결 실패 시 메모리로 조용히 대체하지 않고 503을 반환합니다.
+
+### 남용 방지
+
+세 API 라우트는 인증이 없는 공개 엔드포인트입니다. 현재 방어는 두 겹입니다.
+
+| 값 | 기본 | 설명 |
+| --- | --- | --- |
+| `RATE_LIMIT_XFF_DEPTH` | `1` | `X-Forwarded-For`에서 뒤에서 몇 번째를 클라이언트 주소로 볼지. 프록시가 마지막에 덧붙이므로 기본값 1이 위조에 가장 강합니다. **배포 후 실측으로 확인할 것** — 값이 어긋나면 모든 요청이 같은 키로 묶여 과차단됩니다. |
+| `APP_CHECK_MODE` | 개발 `off` / 운영 `monitor` | `off`·`monitor`·`enforce`. 토큰 검증은 서버에 구현되어 있으나, 클라이언트가 아직 토큰을 보내지 않으므로 `enforce`로 올리면 정상 사용자가 401을 받습니다. |
+
+속도 제한은 IP를 해시해 Firestore `rateLimits` 컬렉션에 1시간 고정 윈도로 세며, 한도는 `src/lib/rate-limit.ts`의 `RATE_LIMITS`에 있습니다(세션 생성 10회/시). 원본 IP는 저장하지 않습니다.
+
+App Check는 클라이언트 연결까지 끝났습니다. 아래 네 값이 모두 있어야 토큰이 발급되며, 하나라도 빠지면 조용히 비활성화됩니다.
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=pastsaju
+NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY=...   # reCAPTCHA Enterprise 사이트 키
+```
+
+`APP_CHECK_MODE=monitor`로 먼저 배포해 오탐을 확인하고, 로그가 깨끗하면 `enforce`로 올립니다.
+
+### 모델 호출 (L2 갈림길 분류)
+
+사용자 서술을 유한 심볼로 접는 단계에서만 모델을 부릅니다. 결정론 패턴이 먼저 돌고, 히트하지 못했을 때만 호출합니다.
+
+| 값 | 기본 | 설명 |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | — | 없으면 LLM 폴백이 비활성화되고 패턴 매칭만 동작합니다 |
+| `LLM_ENABLED` | `true` | `false`면 키가 있어도 호출하지 않는 킬스위치 |
+| `LLM_DAILY_CALL_BUDGET` | `500` | 일일 호출 상한. 닿으면 조용히 미분류로 폴백합니다 |
+| `LLM_SERVER_FALLBACK` | `true` | 안전 분류기 거절 시 서버 측 대체 모델 재시도. 조직에 해당 베타가 없어 400이 나면 `false` |
+
+미분류는 `forkUnknowns` 컬렉션에 7일간 쌓입니다. 주 1회 검토해 `src/lib/fork/ontology.ts`의 `PATTERNS`에 항목을 추가하면 다음부터는 무료 경로로 잡힙니다. 분류율은 `internalMetrics/phase-zero`의 `forkClassified` / `forkUnknown`으로 집계합니다.
 
 ## 배포
 
@@ -126,4 +163,4 @@ App Hosting 롤아웃은 Firestore 규칙·인덱스·TTL 정책을 대신 배�
 - 득실, 공통 과제, 계산 근거, 불확실성 고지, 결과 평가
 - 360px 모바일 레이아웃, 키보드 포커스, 축소 모션·축소 투명도·고대비 대응
 
-세션·선택 상태·피드백은 Firestore에 저장되며, 카드 선택과 중복 피드백은 트랜잭션으로 보호됩니다. 세션 및 피드백 문서는 생성 7일 뒤 만료되고 TTL 정책에 따라 자동 삭제됩니다. App Check와 모델 예산 킬스위치는 배포 전 후속 작업입니다.
+세션·선택 상태·피드백은 Firestore에 저장되며, 카드 선택과 중복 피드백은 트랜잭션으로 보호됩니다. 세션 및 피드백 문서는 생성 7일 뒤 만료되고 TTL 정책에 따라 자동 삭제됩니다. IP 기준 속도 제한과 본문 크기 상한이 적용되어 있고, App Check는 서버 검증까지 구현된 상태입니다(클라이언트 연결은 콘솔 설정 후). 모델 예산 킬스위치는 LLM 도입 시점의 후속 작업입니다.

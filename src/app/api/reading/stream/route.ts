@@ -1,13 +1,24 @@
 import { markReadingCompleted, selectReadingSession } from "@/lib/reading-store";
+import { appCheckResponse, verifyAppCheck } from "@/lib/app-check";
+import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { clientKey, readBoundedBody } from "@/lib/request-guard";
 
 export const runtime = "nodejs";
 
 const encoder = new TextEncoder();
 
 export async function POST(request: Request) {
+  const blocked = appCheckResponse(await verifyAppCheck(request), "reading/stream");
+  if (blocked) return blocked;
+
+  const verdict = await consumeRateLimit("stream", clientKey(request));
+  if (!verdict.ok) return rateLimitResponse(verdict);
+
   let body: { sessionId?: string; slot?: number };
+  const raw = await readBoundedBody(request, 4 * 1024);
   try {
-    body = await request.json();
+    if (raw.status !== "ok") throw new Error(raw.status);
+    body = JSON.parse(raw.text);
   } catch {
     return Response.json({ code: "invalid-input" }, { status: 400 });
   }

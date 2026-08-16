@@ -1,11 +1,22 @@
 import { saveReadingFeedback, type FeedbackValue } from "@/lib/reading-store";
+import { appCheckResponse, verifyAppCheck } from "@/lib/app-check";
+import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { clientKey, readBoundedBody } from "@/lib/request-guard";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const blocked = appCheckResponse(await verifyAppCheck(request), "feedback");
+  if (blocked) return blocked;
+
+  const verdict = await consumeRateLimit("feedback", clientKey(request));
+  if (!verdict.ok) return rateLimitResponse(verdict);
+
   let body: { sessionId?: string; value?: string };
+  const raw = await readBoundedBody(request, 4 * 1024);
   try {
-    body = (await request.json()) as { sessionId?: string; value?: string };
+    if (raw.status !== "ok") throw new Error(raw.status);
+    body = JSON.parse(raw.text) as { sessionId?: string; value?: string };
   } catch {
     return Response.json({ ok: false }, { status: 400 });
   }
