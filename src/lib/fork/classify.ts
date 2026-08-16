@@ -18,22 +18,39 @@ export function normalizeText(value: string) {
   return value.normalize("NFC").replace(/[\s\p{P}\p{S}]/gu, "").toLowerCase();
 }
 
-type Hit = { domain: DomainId; pole: PolarityValue; weight: number };
+type Hit = { domain: DomainId; pole: PolarityValue; weight: number; needle: string; source: string };
 
 function scan(text: string, weight: number, invert: boolean): Hit[] {
   if (!text) return [];
   const normalized = normalizeText(text);
   const hits: Hit[] = [];
   for (const pattern of PATTERNS) {
-    if (!pattern.match.some((needle) => normalized.includes(needle))) continue;
+    const needle = pattern.match.find((candidate) => normalized.includes(candidate));
+    if (!needle) continue;
     const axis = DOMAINS[pattern.domain].polarityAxis;
     hits.push({
       domain: pattern.domain,
       pole: invert ? oppositePole(axis, pattern.pole) : pattern.pole,
       weight,
+      needle,
+      source: text,
     });
   }
   return hits;
+}
+
+/**
+ * 히트한 표현이 들어 있는 **원문 문장**을 그대로 잘라낸다.
+ *
+ * 발췌는 정의상 원문 부분문자열이므로 근거 검증을 통과한다. 패턴 경로에서도
+ * 사용자의 말이 L5까지 닿게 하는 것이 목적이다 — 이게 없으면 패턴이 잘 맞을수록
+ * 서사가 덜 개인적이 되는 역설이 생긴다.
+ */
+function quoteFor(hit: Hit): string | null {
+  const sentences = hit.source.split(/(?<=[.!?。])\s+|\n+/).map((part) => part.trim()).filter(Boolean);
+  const found = sentences.find((sentence) => normalizeText(sentence).includes(hit.needle));
+  if (!found) return null;
+  return found.length > 120 ? found.slice(0, 120) : found;
 }
 
 /** 대안이 얼마나 살아 있었는가. readiness(준비도) + freedom(선택 여지). */
@@ -101,8 +118,13 @@ export function classifyFork(input: ReadingInput): ForkResult {
         confidence,
         source: "pattern",
       },
-      // A1은 패턴만 사용하므로 발췌가 없다. A2(LLM 폴백)에서 채운다.
-      evidence: { subject: null, stakes: [], constraint: null, quotes: [] },
+      // 패턴이 히트한 원문 문장을 그대로 넘긴다. L5가 사용자의 말로 서사를 쓸 수 있어야 한다.
+      evidence: {
+        subject: null,
+        stakes: [],
+        constraint: null,
+        quotes: [...new Set(hits.filter((hit) => hit.domain === domain).map(quoteFor).filter((quote): quote is string => Boolean(quote)))].slice(0, 3),
+      },
     },
   };
 }

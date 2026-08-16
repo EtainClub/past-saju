@@ -1,3 +1,5 @@
+import type { ForkResult } from "./fork/types";
+
 export type EventCategory =
   | "이직"
   | "이사"
@@ -35,7 +37,7 @@ export type ReadingInput = {
 };
 
 export type TenGodAxis = "식상" | "관성" | "재성" | "인성" | "비겁";
-export type Domain = "재물" | "직업·명예" | "관계" | "학습·내면" | "동료·독립";
+export type Domain = "재물" | "직업·명예" | "관계" | "학습·내면" | "동료·독립" | "표현·창작";
 
 export type TurningPoint = {
   monthOffset: number;
@@ -114,6 +116,8 @@ export type ReadingSession = {
   id: string;
   input: ReadingInput;
   createdAt: number;
+  /** L2 판정 결과. L5 렌더러가 evidence를 쓰고, 미분류 검토에도 쓰인다. */
+  fork: ForkResult;
   selectedSlot?: number;
   completedAt?: number;
   choices: ChoiceSecret[];

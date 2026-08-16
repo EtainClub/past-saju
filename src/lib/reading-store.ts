@@ -1,6 +1,6 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "./firebase-admin";
-import type { ReadingSession } from "./reading-types";
+import type { ReadingResult, ReadingSession } from "./reading-types";
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSIONS_COLLECTION = "readingSessions";
@@ -141,6 +141,37 @@ export async function selectReadingSession(sessionId: string, slot: number): Pro
 
     return { status: "ok", session, firstSelection };
   });
+}
+
+/**
+ * LLM으로 렌더링한 결과를 해당 카드에 고정한다.
+ *
+ * "고른 카드는 끝까지 바뀌지 않아요"가 제품의 약속이므로, 재열람 시 같은 문장이
+ * 나와야 한다. 저장에 실패해도 예외를 던지지 않는다 — 이번 응답은 이미 성립했고,
+ * 재열람 시 템플릿으로 돌아가는 편이 오류 화면보다 낫다.
+ */
+export async function saveRenderedResult(sessionId: string, slot: number, result: ReadingResult) {
+  if (!shouldUseFirestore()) {
+    const session = memorySessions.get(sessionId);
+    if (session?.choices[slot]) session.choices[slot].result = result;
+    return;
+  }
+
+  try {
+    const db = getFirebaseAdminFirestore();
+    const ref = db.collection(SESSIONS_COLLECTION).doc(sessionId);
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists) return;
+      const session = sessionFromFirestore(snapshot.data()!);
+      if (!session.choices[slot]) return;
+      const choices = JSON.parse(JSON.stringify(session.choices)) as ReadingSession["choices"];
+      choices[slot].result = result;
+      transaction.update(ref, { choices });
+    });
+  } catch (error) {
+    console.error("렌더 결과 저장 실패", error);
+  }
 }
 
 export async function markReadingCompleted(sessionId: string) {

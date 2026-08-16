@@ -1,7 +1,9 @@
-import { markReadingCompleted, selectReadingSession } from "@/lib/reading-store";
+import { markReadingCompleted, saveRenderedResult, selectReadingSession } from "@/lib/reading-store";
 import { appCheckResponse, verifyAppCheck } from "@/lib/app-check";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { clientKey, readBoundedBody } from "@/lib/request-guard";
+import { inRenderSample, llmRenderEnabled, renderWithLlm } from "@/lib/render/llm";
+import { validateNarrative } from "@/lib/render/template";
 
 export const runtime = "nodejs";
 
@@ -54,21 +56,22 @@ export async function POST(request: Request) {
 
   const session = selection.session;
   const choice = session.choices[body.slot!];
-  const result = choice.result;
-  const chunks = [
-    {
-      type: "reveal",
-      data: {
-        slot: body.slot,
-        choiceId: choice.id,
-        title: choice.title,
-        choiceText: choice.text,
-        choiceAxis: choice.axis,
-        nonce: choice.nonce,
-        commitment: choice.commitment,
-        sessionId: session.id,
-      },
+
+  const reveal = {
+    type: "reveal",
+    data: {
+      slot: body.slot,
+      choiceId: choice.id,
+      title: choice.title,
+      choiceText: choice.text,
+      choiceAxis: choice.axis,
+      nonce: choice.nonce,
+      commitment: choice.commitment,
+      sessionId: session.id,
     },
+  };
+
+  const bodyChunks = (result: typeof choice.result) => [
     ...result.overview.map((paragraph, index) => ({ type: "overview", data: { index, paragraph } })),
     ...result.timeline.map((item, index) => ({ type: "timeline", data: { index, item } })),
     { type: "balance", data: { gains: result.gains, losses: result.losses } },
@@ -80,9 +83,32 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      for (const chunk of chunks) {
-        controller.enqueue(encoder.encode(`${JSON.stringify(chunk)}\n`));
-        await new Promise((resolve) => setTimeout(resolve, chunk.type === "reveal" ? 420 : 240));
+      const send = (chunk: unknown) => controller.enqueue(encoder.encode(`${JSON.stringify(chunk)}\n`));
+
+      // 카드 공개는 먼저 내보낸다. LLM 렌더링은 수십 초가 걸릴 수 있으므로,
+      // 그 동안 사용자가 빈 화면을 보지 않도록 한다.
+      send(reveal);
+
+      // L5 — 처음 여는 카드만 LLM으로 렌더링한다. 재열람은 고정된 결과를 그대로 낸다.
+      // 생성·검증을 다 마친 뒤에 본문을 내보낸다 — 토큰을 미리 흘리면 위반을 발견해도 되돌릴 수 없다.
+      let result = choice.result;
+      if (selection.firstSelection && llmRenderEnabled() && inRenderSample(session.id)) {
+        const rendered = await renderWithLlm(
+          session.input,
+          choice.narrativeSpec,
+          session.fork,
+          choice.result,
+          (candidate) => validateNarrative(choice.narrativeSpec, candidate),
+        );
+        if (rendered) {
+          result = rendered;
+          await saveRenderedResult(session.id, body.slot!, rendered);
+        }
+      }
+
+      for (const chunk of bodyChunks(result)) {
+        send(chunk);
+        await new Promise((resolve) => setTimeout(resolve, 240));
       }
       try {
         await markReadingCompleted(session.id);

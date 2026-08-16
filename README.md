@@ -93,6 +93,19 @@ NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY=...   # reCAPTCHA Enterprise 사이트 �
 | `LLM_DAILY_CALL_BUDGET` | `500` | 일일 호출 상한. 닿으면 조용히 미분류로 폴백합니다 |
 | `LLM_SERVER_FALLBACK` | `true` | 안전 분류기 거절 시 서버 측 대체 모델 재시도. 조직에 해당 베타가 없어 400이 나면 `false` |
 
+### 모델 렌더링 (L5 서사)
+
+열린 카드 한 장만 LLM으로 씁니다. 결정론 템플릿이 항상 폴백으로 존재하므로 실패해도 사용자는 오류를 보지 않습니다.
+
+| 값 | 기본 | 설명 |
+| --- | --- | --- |
+| `LLM_RENDER_ENABLED` | `false` | 명시적으로 `true`여야 렌더링합니다. 끄면 전부 템플릿 |
+| `LLM_RENDER_SAMPLE` | `1` | 0~1 점진 전환 비율. 세션 id 기준이라 재열람 시 경로가 바뀌지 않습니다 |
+
+대가 문장·주요 영역·얻는 것·놓는 것·근거란은 **코드가 고정**하고, 모델은 그 사이의 산문만 씁니다. 생성 결과는 3단 충실성 검사(전환점 개월·불변 주제·인용 근거·factId)를 통과해야 하며, 실패 시 1회 재생성 후 템플릿으로 폴백합니다. 첫 열람 결과는 `saveRenderedResult`로 고정되어 재열람 시 같은 문장이 나옵니다.
+
+지표는 `internalMetrics/phase-zero`의 `renderAttempt` / `renderSucceeded` / `renderFidelityFail_*` / `renderFallback_*`로 집계합니다. 렌더링은 L2와 `LLM_DAILY_CALL_BUDGET`을 공유합니다.
+
 미분류는 `forkUnknowns` 컬렉션에 7일간 쌓입니다. 주 1회 검토해 `src/lib/fork/ontology.ts`의 `PATTERNS`에 항목을 추가하면 다음부터는 무료 경로로 잡힙니다. 분류율은 `internalMetrics/phase-zero`의 `forkClassified` / `forkUnknown`으로 집계합니다.
 
 ## 배포
