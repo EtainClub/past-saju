@@ -24,6 +24,7 @@ import { classifyFork } from "./fork/classify";
 import { forkBias } from "./fork/bias";
 import type { AxisBias, ForkResult } from "./fork/types";
 import { AXIS_COPY, choiceText, renderReading, validateNarrative } from "./render/template";
+import { DEFAULT_PROFILE } from "./chart/profile";
 const DOMAIN_BY_AXIS: Record<TenGodAxis, Domain> = {
   // 식상과 인성이 둘 다 "학습·내면"이던 것을 분리했다(2026-08-16, §7-6 결정).
   // 5축이 4도메인으로 접히면서 카드 세 장 중 두 장이 같은 영역을 말하는 문제가 있었다.
@@ -109,7 +110,7 @@ function calculateChart(input: ReadingInput) {
     hour,
     minute,
     gender,
-    dayBoundary: "jasi",
+    dayBoundary: DEFAULT_PROFILE.dayBoundary,
     trueSolarTime: {
       longitude: CITY_LONGITUDE[input.birth.city] ?? KOREA_AVERAGE_LONGITUDE,
       applyEquationOfTime: true,
@@ -166,11 +167,11 @@ function rankedAxes(
     const axis = axisFromTenGod(god);
     scores.set(axis, (scores.get(axis) ?? 0) + weight);
   });
-  const useful = strengthScore >= 55 ? ["식상", "재성", "관성"] : strengthScore < 45 ? ["인성", "비겁"] : ["식상", "인성", "재성"];
+  const useful = strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? ["식상", "재성", "관성"] : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? ["인성", "비겁"] : ["식상", "인성", "재성"];
   useful.forEach((axis) => scores.set(axis as TenGodAxis, (scores.get(axis as TenGodAxis) ?? 0) + 1.2));
   const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
-  const usefulPool: TenGodAxis[] = strengthScore >= 55 ? ["식상", "재성", "관성"] : strengthScore < 45 ? ["인성", "비겁"] : ranked.slice(0, 2).map(([axis]) => axis);
-  const hostilePool: TenGodAxis[] = strengthScore >= 55 ? ["비겁", "인성"] : strengthScore < 45 ? ["식상", "재성", "관성"] : ranked.slice(-2).map(([axis]) => axis);
+  const usefulPool: TenGodAxis[] = strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? ["식상", "재성", "관성"] : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? ["인성", "비겁"] : ranked.slice(0, 2).map(([axis]) => axis);
+  const hostilePool: TenGodAxis[] = strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? ["비겁", "인성"] : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? ["식상", "재성", "관성"] : ranked.slice(-2).map(([axis]) => axis);
   const biased = new Map(scores);
   for (const [axis, delta] of Object.entries(bias) as Array<[TenGodAxis, number]>) {
     biased.set(axis, (biased.get(axis) ?? 0) + delta);
@@ -289,7 +290,7 @@ function buildEngineContext(input: ReadingInput, resolvedFork?: ForkResult): Eng
     usefulAxes: ranking.usefulAxes,
     hostileAxes: ranking.hostileAxes,
     strengthScore,
-    strengthBand: strengthScore >= 55 ? "신강" : strengthScore < 45 ? "신약" : "중간",
+    strengthBand: strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? "신강" : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? "신약" : "중간",
     daeunTransition,
     daeunLabel,
     turningPoints: buildTurningPoints(input, chart, ranking.usefulAxes, ranking.hostileAxes, daeunTransition),

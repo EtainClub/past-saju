@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "../legal.module.css";
 
-// TODO(법무검토): 코드 동작을 근거로 작성한 초안입니다. 공개 전 법률 검토 필요.
-const CONTACT = "support@ifsaju.com";
+// 문안은 코드 동작을 근거로 작성했습니다. TODO: 사업자 등록 후 상호·대표자 추가.
+const CONTACT = "etainclub@gmail.com";
 const EFFECTIVE_DATE = "2026년 8월 16일";
 
 export const metadata: Metadata = {

@@ -11,7 +11,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc scripts/engine-fixtures.ts scripts/store-fixtures.ts scripts/fork-fixtures.ts scripts/guard-fixtures.ts scripts/l2-fixtures.ts scripts/render-snapshot.ts scripts/l5-fixtures.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --lib ES2022,DOM --esModuleInterop --skipLibCheck && node .test-dist/scripts/engine-fixtures.js && node .test-dist/scripts/fork-fixtures.js && node .test-dist/scripts/guard-fixtures.js && node .test-dist/scripts/l2-fixtures.js && node .test-dist/scripts/render-snapshot.js aea8df178d8261d5dda9533eea6e62a6df43cc0fbc7cd0109716ef7742b2a6c4 && node .test-dist/scripts/l5-fixtures.js && node .test-dist/scripts/store-fixtures.js",
+    "test": "tsc scripts/engine-fixtures.ts scripts/store-fixtures.ts scripts/fork-fixtures.ts scripts/guard-fixtures.ts scripts/l2-fixtures.ts scripts/render-snapshot.ts scripts/l5-fixtures.ts scripts/chart-golden.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --lib ES2022,DOM --esModuleInterop --skipLibCheck && node .test-dist/scripts/engine-fixtures.js && node .test-dist/scripts/fork-fixtures.js && node .test-dist/scripts/guard-fixtures.js && node .test-dist/scripts/l2-fixtures.js && node .test-dist/scripts/render-snapshot.js 12d60532f66aa6197dc2478a443ccd3855f05e59eb1fbadb22e2275ccc34eab2 && node .test-dist/scripts/l5-fixtures.js && node .test-dist/scripts/chart-golden.js && node .test-dist/scripts/store-fixtures.js",
     "test:firebase": "node --env-file=.env.local scripts/firebase-smoke.cjs"
   },
   "dependencies": {

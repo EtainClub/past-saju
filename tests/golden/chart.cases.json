@@ -1,0 +1,1120 @@
+[
+  {
+    "id": "ipchun-2000--10",
+    "group": "입춘 경계",
+    "note": "2000년 입춘 절입 10분 전 (연주가 갈립니다)",
+    "input": {
+      "date": "2000-02-04",
+      "time": "21:30",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기묘",
+      "month": "정축",
+      "day": "임진",
+      "hour": "경술"
+    }
+  },
+  {
+    "id": "ipchun-2000-10",
+    "group": "입춘 경계",
+    "note": "2000년 입춘 절입 10분 후 (연주가 갈립니다)",
+    "input": {
+      "date": "2000-02-04",
+      "time": "21:50",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경진",
+      "month": "무인",
+      "day": "임진",
+      "hour": "신해"
+    }
+  },
+  {
+    "id": "ipchun-2000--1440",
+    "group": "입춘 경계",
+    "note": "2000년 입춘 절입 1일 전 (연주가 갈립니다)",
+    "input": {
+      "date": "2000-02-03",
+      "time": "21:40",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기묘",
+      "month": "정축",
+      "day": "신묘",
+      "hour": "무술"
+    }
+  },
+  {
+    "id": "jeol-1990-0",
+    "group": "절 경계",
+    "note": "1990년 소한 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-01-05",
+      "time": "23:28",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기사",
+      "month": "병자",
+      "day": "경오",
+      "hour": "정해"
+    }
+  },
+  {
+    "id": "jeol-1990-2",
+    "group": "절 경계",
+    "note": "1990년 입춘 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-02-04",
+      "time": "11:09",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기사",
+      "month": "정축",
+      "day": "경자",
+      "hour": "신사"
+    }
+  },
+  {
+    "id": "jeol-1990-4",
+    "group": "절 경계",
+    "note": "1990년 경칩 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-03-06",
+      "time": "05:14",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "무인",
+      "day": "경오",
+      "hour": "무인"
+    }
+  },
+  {
+    "id": "jeol-1990-6",
+    "group": "절 경계",
+    "note": "1990년 청명 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-04-05",
+      "time": "10:08",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "기묘",
+      "day": "경자",
+      "hour": "신사"
+    }
+  },
+  {
+    "id": "jeol-1990-8",
+    "group": "절 경계",
+    "note": "1990년 입하 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-05-06",
+      "time": "03:30",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "경진",
+      "day": "신미",
+      "hour": "경인"
+    }
+  },
+  {
+    "id": "jeol-1990-10",
+    "group": "절 경계",
+    "note": "1990년 망종 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-06-06",
+      "time": "07:41",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "신사",
+      "day": "임인",
+      "hour": "갑진"
+    }
+  },
+  {
+    "id": "jeol-1990-12",
+    "group": "절 경계",
+    "note": "1990년 소서 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-07-07",
+      "time": "17:55",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "임오",
+      "day": "계유",
+      "hour": "신유"
+    }
+  },
+  {
+    "id": "jeol-1990-14",
+    "group": "절 경계",
+    "note": "1990년 입추 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-08-08",
+      "time": "03:41",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "계미",
+      "day": "을사",
+      "hour": "무인"
+    }
+  },
+  {
+    "id": "jeol-1990-16",
+    "group": "절 경계",
+    "note": "1990년 백로 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-09-08",
+      "time": "06:32",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "갑신",
+      "day": "병자",
+      "hour": "신묘"
+    }
+  },
+  {
+    "id": "jeol-1990-18",
+    "group": "절 경계",
+    "note": "1990년 한로 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-10-08",
+      "time": "22:09",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "을유",
+      "day": "병오",
+      "hour": "기해"
+    }
+  },
+  {
+    "id": "jeol-1990-20",
+    "group": "절 경계",
+    "note": "1990년 입동 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-11-08",
+      "time": "01:19",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "병술",
+      "day": "정축",
+      "hour": "신축"
+    }
+  },
+  {
+    "id": "jeol-1990-22",
+    "group": "절 경계",
+    "note": "1990년 대설 절입 5분 전 (월주가 이전 달이어야 합니다)",
+    "input": {
+      "date": "1990-12-07",
+      "time": "18:09",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경오",
+      "month": "정해",
+      "day": "병오",
+      "hour": "정유"
+    }
+  },
+  {
+    "id": "kst830-1957",
+    "group": "표준시 +8:30",
+    "note": "동경 127.5° 표준시 시행 중 — 시주가 30분 밀립니다",
+    "input": {
+      "date": "1957-06-20",
+      "time": "12:00",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "정유",
+      "month": "병오",
+      "day": "계해",
+      "hour": "정사"
+    }
+  },
+  {
+    "id": "kst830-1960",
+    "group": "표준시 +8:30",
+    "note": "동경 127.5° 표준시 시행 중",
+    "input": {
+      "date": "1960-01-15",
+      "time": "07:40",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기해",
+      "month": "정축",
+      "day": "임인",
+      "hour": "갑진"
+    }
+  },
+  {
+    "id": "kst830-1955",
+    "group": "표준시 +8:30",
+    "note": "동경 127.5° 표준시 시행 중",
+    "input": {
+      "date": "1955-09-03",
+      "time": "23:20",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을미",
+      "month": "갑신",
+      "day": "정묘",
+      "hour": "신해"
+    }
+  },
+  {
+    "id": "dst-1987",
+    "group": "서머타임",
+    "note": "1987년 서머타임 — 시주가 1시간 밀립니다",
+    "input": {
+      "date": "1987-07-15",
+      "time": "14:00",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "정묘",
+      "month": "정미",
+      "day": "을축",
+      "hour": "임오"
+    }
+  },
+  {
+    "id": "dst-1988",
+    "group": "서머타임",
+    "note": "1988년 서머타임",
+    "input": {
+      "date": "1988-08-10",
+      "time": "09:30",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "무진",
+      "month": "경신",
+      "day": "정유",
+      "hour": "갑진"
+    }
+  },
+  {
+    "id": "dst-1959",
+    "group": "서머타임",
+    "note": "1959년 서머타임 (+8:30 구간과 겹칩니다)",
+    "input": {
+      "date": "1959-07-05",
+      "time": "16:20",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기해",
+      "month": "경오",
+      "day": "무자",
+      "hour": "경신"
+    }
+  },
+  {
+    "id": "jasi-2250",
+    "group": "자시 경계",
+    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "input": {
+      "date": "1995-05-20",
+      "time": "22:50",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "기해"
+    }
+  },
+  {
+    "id": "jasi-2305",
+    "group": "자시 경계",
+    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "input": {
+      "date": "1995-05-20",
+      "time": "23:05",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "기해"
+    }
+  },
+  {
+    "id": "jasi-2330",
+    "group": "자시 경계",
+    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "input": {
+      "date": "1995-05-20",
+      "time": "23:30",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "경자"
+    }
+  },
+  {
+    "id": "jasi-2355",
+    "group": "자시 경계",
+    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "input": {
+      "date": "1995-05-20",
+      "time": "23:55",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "경자"
+    }
+  },
+  {
+    "id": "jasi-0010",
+    "group": "자시 경계",
+    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "input": {
+      "date": "1995-05-20",
+      "time": "00:10",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을해",
+      "month": "신사",
+      "day": "경술",
+      "hour": "무자"
+    }
+  },
+  {
+    "id": "leap-2020-04",
+    "group": "윤달",
+    "note": "2020년 윤4월",
+    "input": {
+      "date": "2020-04-15",
+      "time": "10:00",
+      "timeUnknown": false,
+      "calendarType": "lunar",
+      "lunarLeapMonth": true,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경자",
+      "month": "임오",
+      "day": "경진",
+      "hour": "신사"
+    }
+  },
+  {
+    "id": "leap-2017-05",
+    "group": "윤달",
+    "note": "2017년 윤5월",
+    "input": {
+      "date": "2017-05-10",
+      "time": "18:30",
+      "timeUnknown": false,
+      "calendarType": "lunar",
+      "lunarLeapMonth": true,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "정유",
+      "month": "병오",
+      "day": "신묘",
+      "hour": "정유"
+    }
+  },
+  {
+    "id": "leap-2014-09",
+    "group": "윤달",
+    "note": "2014년 윤9월",
+    "input": {
+      "date": "2014-09-22",
+      "time": "03:15",
+      "timeUnknown": false,
+      "calendarType": "lunar",
+      "lunarLeapMonth": true,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "갑오",
+      "month": "을해",
+      "day": "기축",
+      "hour": "을축"
+    }
+  },
+  {
+    "id": "notime-1978",
+    "group": "시간 미상",
+    "note": "시주를 반영하지 않아야 합니다",
+    "input": {
+      "date": "1978-11-03",
+      "time": "",
+      "timeUnknown": true,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "무오",
+      "month": "임술",
+      "day": "기사",
+      "hour": "경오"
+    }
+  },
+  {
+    "id": "notime-2001",
+    "group": "시간 미상",
+    "note": "시주를 반영하지 않아야 합니다",
+    "input": {
+      "date": "2001-03-28",
+      "time": "",
+      "timeUnknown": true,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "신사",
+      "month": "신묘",
+      "day": "경인",
+      "hour": "임오"
+    }
+  },
+  {
+    "id": "regular-1",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1945-08-15",
+      "time": "06:00",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "을유",
+      "month": "갑신",
+      "day": "병진",
+      "hour": "신묘"
+    }
+  },
+  {
+    "id": "regular-2",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1963-12-01",
+      "time": "21:45",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "계묘",
+      "month": "계해",
+      "day": "무인",
+      "hour": "계해"
+    }
+  },
+  {
+    "id": "regular-3",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1971-02-19",
+      "time": "11:10",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "부산",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "신해",
+      "month": "경인",
+      "day": "을해",
+      "hour": "신사"
+    }
+  },
+  {
+    "id": "regular-4",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1980-06-30",
+      "time": "00:30",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "대구",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "경신",
+      "month": "임오",
+      "day": "계유",
+      "hour": "갑자"
+    }
+  },
+  {
+    "id": "regular-5",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1991-07-15",
+      "time": "09:30",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "신미",
+      "month": "을미",
+      "day": "병술",
+      "hour": "임진"
+    }
+  },
+  {
+    "id": "regular-6",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1999-12-31",
+      "time": "23:59",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기묘",
+      "month": "병자",
+      "day": "정사",
+      "hour": "임자"
+    }
+  },
+  {
+    "id": "regular-7",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "2000-01-01",
+      "time": "00:01",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기묘",
+      "month": "병자",
+      "day": "정사",
+      "hour": "임자"
+    }
+  },
+  {
+    "id": "regular-8",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "2008-10-09",
+      "time": "15:20",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "제주",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "무자",
+      "month": "임술",
+      "day": "임오",
+      "hour": "무신"
+    }
+  },
+  {
+    "id": "regular-9",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "2013-04-05",
+      "time": "08:00",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "강릉",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "계사",
+      "month": "병진",
+      "day": "신축",
+      "hour": "임진"
+    }
+  },
+  {
+    "id": "regular-10",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "2019-09-23",
+      "time": "19:05",
+      "timeUnknown": false,
+      "calendarType": "solar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "기해",
+      "month": "계유",
+      "day": "계해",
+      "hour": "신유"
+    }
+  },
+  {
+    "id": "regular-11",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1968-03-11",
+      "time": "13:40",
+      "timeUnknown": false,
+      "calendarType": "lunar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "남성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "무신",
+      "month": "병진",
+      "day": "무신",
+      "hour": "기미"
+    }
+  },
+  {
+    "id": "regular-12",
+    "group": "일반 회귀",
+    "note": "특이 조건 없는 대조군",
+    "input": {
+      "date": "1984-11-27",
+      "time": "05:55",
+      "timeUnknown": false,
+      "calendarType": "lunar",
+      "lunarLeapMonth": false,
+      "city": "서울",
+      "gender": "여성"
+    },
+    "expected": {
+      "year": "",
+      "month": "",
+      "day": "",
+      "hour": ""
+    },
+    "engineOutput": {
+      "year": "갑자",
+      "month": "정축",
+      "day": "병진",
+      "hour": "신묘"
+    }
+  }
+]
