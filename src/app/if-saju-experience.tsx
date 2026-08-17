@@ -297,7 +297,7 @@ function ChartScreen({
       <main className="tab-page">
         <p className="eyebrow"><span />내 사주</p>
         <h1>생년월일시를<br />먼저 알려주세요.</h1>
-        <p className="tab-intro">명식은 태어난 시각에서 나옵니다. 한 번 입력하면 이 기기에 저장돼 다시 묻지 않아요.</p>
+        <p className="tab-intro">같은 선택이라도 사람마다 치르는 대가가 다릅니다. 그 차이는 태어난 시각에서 나와요. 한 번 입력하면 이 기기에 저장돼 다시 묻지 않습니다.</p>
         <button className="primary-button" type="button" onClick={onGoBirth}>생년월일 입력하기 <Arrow /></button>
       </main>
     );
@@ -318,7 +318,7 @@ function ChartScreen({
         <>
           <p className="tab-intro">
             일간은 <b>{chart.dayMaster.korean}({chart.dayMaster.hanja})</b>, 오행으로는 <b>{chart.dayMaster.element}</b>입니다.
-            사주에서 &lsquo;나&rsquo;를 가리키는 글자예요.
+            사주에서 &lsquo;나&rsquo;를 가리키는 글자예요. <b>가지 않은 길의 대가가 사람마다 다른 이유</b>가 여기 있습니다.
           </p>
 
           <div className="pillar-grid">
@@ -413,10 +413,10 @@ function ArchiveScreen({
     return (
       <main className="tab-page">
         <p className="eyebrow"><span />보관함</p>
-        <h1>저장한 이야기를<br />여기서 다시 봅니다.</h1>
+        <h1>후회는 한 번 읽고<br />정리되지 않습니다.</h1>
         <p className="tab-intro">
-          결과 화면에서 <b>보관하기</b>를 누르면 이곳에 쌓입니다. 기기를 바꿔도 남으려면
-          구글 계정 연결이 필요해요.
+          그래서 다시 꺼내 볼 수 있게 해 둡니다. 결과 화면에서 <b>보관하기</b>를 누르면
+          이곳에 쌓여요. 기기를 바꿔도 남으려면 구글 계정 연결이 필요합니다.
         </p>
         <button className="primary-button" type="button" onClick={onLink}>구글 계정으로 시작하기</button>
       </main>
@@ -476,10 +476,11 @@ function SaveBox({ state, linked, onSave }: { state: "idle" | "working" | "saved
   }
   return (
     <div className="save-box">
-      <strong>이 이야기를 계속 보관할까요?</strong>
+      <strong>이 이야기, 다시 꺼내 보실 건가요?</strong>
       <span>
-        지금은 <b>7일 뒤 자동으로 지워집니다.</b> 구글 계정으로 저장하면 1년 동안
-        다시 볼 수 있어요. 저장하지 않아도 결과는 그대로 보실 수 있습니다.
+        후회는 한 번 읽고 정리되지 않습니다. 지금은 <b>7일 뒤 자동으로 지워집니다.</b>{" "}
+        구글 계정으로 저장하면 1년 동안 다시 볼 수 있어요. 저장하지 않아도 결과는
+        그대로 보실 수 있습니다.
       </span>
       <button type="button" className="secondary-button" onClick={onSave} disabled={state === "working"}>
         {state === "working" ? <><span className="spinner" /> 저장하는 중</> : linked ? "이 이야기 보관하기" : "구글 계정으로 저장하기"}
@@ -948,15 +949,15 @@ export function IfSajuExperience() {
       {tab === "story" && stage === "landing" && (
         <main className="landing" ref={mainRef} tabIndex={-1}>
           <div className="hero-copy">
-            <p className="eyebrow"><span />만약사주의 첫 번째 이야기</p>
-            <h1>그때, 다른 길을<br />걸었다면.</h1>
-            <p className="hero-description">미래를 점치는 대신, 지나간 운명의 갈림길을 다시 엽니다.<br className="desktop-only" /> 당신의 사주가 고른 세 개의 길 중 하나를 만나보세요.</p>
+            <p className="eyebrow"><span />아직 정리 안 된 그 선택</p>
+            <h1>그때 그 선택,<br />아직도 후회되나요.</h1>
+            <p className="hero-description">가지 않은 길이 더 나았을 거라는 생각, 혼자서는 정리되지 않습니다.<br className="desktop-only" /> 그 길에도 치를 대가가 있었다는 걸 당신의 사주로 보여드립니다.</p>
             <div className="brand-definition">
               <strong>만약사주란?</strong>
-              <p>“그때 다른 길을 골랐다면?” 지나온 선택을 통해 지금의 나를 이해하는 사주입니다.</p>
+              <p>미래를 점치지 않습니다. 대신 당신이 고르지 않은 길에서 무엇을 얻고 무엇을 잃었을지 3년치로 보여드립니다. 후회가 옅어지는 건 그다음입니다.</p>
             </div>
             <button className="primary-button hero-button" type="button" onClick={() => setStage("birth")}>
-              지나간 갈림길 열기 <Arrow />
+              그 길 끝을 확인하기 <Arrow />
             </button>
             <p className="microcopy"><LockIcon /> 이름과 연락처는 받지 않으며, 입력은 7일 뒤 사라집니다.</p>
           </div>
@@ -968,7 +969,7 @@ export function IfSajuExperience() {
             <span className="star star-one">✦</span><span className="star star-two">·</span><span className="star star-three">✧</span>
           </div>
           <div className="how-it-works" aria-label="이용 순서">
-            <span><b>01</b> 갈림길을 들려주세요</span><i /><span><b>02</b> 봉인된 한 장을 고르세요</span><i /><span><b>03</b> 가지 않은 3년을 읽어요</span>
+            <span><b>01</b> 그때 이야기를 씁니다</span><i /><span><b>02</b> 딱 한 장만 엽니다</span><i /><span><b>03</b> 그 길의 대가를 봅니다</span>
           </div>
         </main>
       )}
@@ -977,9 +978,9 @@ export function IfSajuExperience() {
         <main className="form-page" ref={mainRef} tabIndex={-1}>
           <button className="back-button" type="button" onClick={() => setStage("landing")}><Arrow direction="left" /> 돌아가기</button>
           <section className="form-heading">
-            <p className="eyebrow"><span />첫 번째 기록</p>
+            <p className="eyebrow"><span />01 그때 이야기를 씁니다</p>
             <h1>태어난 순간을<br />알려주세요.</h1>
-            <p>이 정보는 이야기의 시점과 흐름을 계산하는 데만 쓰입니다.</p>
+            <p>같은 선택이라도 사람마다 치르는 대가가 다릅니다. 그 차이를 가르는 게 이 정보예요.</p>
           </section>
           <form className="input-card" onSubmit={submitBirth}>
             <div className="field-grid two-columns">
@@ -1068,9 +1069,9 @@ export function IfSajuExperience() {
         <main className="form-page event-page" ref={mainRef} tabIndex={-1}>
           <button className="back-button" type="button" onClick={() => setStage("birth")}><Arrow direction="left" /> 출생 정보</button>
           <section className="form-heading compact-heading">
-            <p className="eyebrow"><span />두 번째 기록</p>
-            <h1>마음에 남은<br />갈림길은 언제였나요?</h1>
-            <p>잘 쓴 글이 아니어도 괜찮아요. 그때의 상황만 솔직하게 들려주세요.</p>
+            <p className="eyebrow"><span />01 그때 이야기를 씁니다</p>
+            <h1>아직도 생각나는<br />그 선택은 뭔가요?</h1>
+            <p>잘 쓴 글이 아니어도 괜찮아요. 적어 주신 표현이 결과 문장에 그대로 인용됩니다.</p>
           </section>
           <form className="input-card wide-card" onSubmit={prepareCards}>
             <fieldset className="category-field"><legend>어떤 일이었나요?</legend><div className="category-grid">{CATEGORIES.map(({ label, glyph }) => <button key={label} type="button" aria-pressed={event.category === label} onClick={() => setEvent({ ...event, category: label })}><b>{glyph}</b><span>{label}</span></button>)}</div></fieldset>
@@ -1089,9 +1090,9 @@ export function IfSajuExperience() {
 
       {tab === "story" && stage === "cards" && session && (
         <main className="cards-page" ref={mainRef} tabIndex={-1}>
-          <p className="eyebrow centered"><span />세 갈래의 가능성</p>
+          <p className="eyebrow centered"><span />02 딱 한 장만 엽니다</p>
           <h1>마음이 가는 한 장을<br />골라주세요.</h1>
-          <p className="cards-intro">각 카드에는 사주가 고른 서로 다른 길이 봉인되어 있습니다.<br />생각보다 먼저 닿는 쪽을 선택해 보세요.</p>
+          <p className="cards-intro"><b>한 장을 열면 나머지 둘은 영영 닫힙니다. 그때처럼요.</b><br />생각보다 먼저 닿는 쪽을 선택해 보세요.</p>
           <div className="sealed-cards" role="group" aria-label="봉인된 카드 세 장">
             {CARD_SLOTS.map((slot) => <button className={`sealed-card card-back ${cardVariant(slot)}`} key={slot} type="button" onClick={(eventObject) => previewCard(slot, eventObject)} aria-label={`${slot + 1}번째 봉인 카드 선택`}><span className="card-number">0{slot + 1}</span><CardArtwork slot={slot} /><span className="card-prompt">이 길을 열어보기</span></button>)}
           </div>
@@ -1146,7 +1147,7 @@ export function IfSajuExperience() {
             <h2 id="info-title">예언이 아닌,<br />지나간 선택의 성찰입니다.</h2>
             <div className="brand-story">
               <span>이름에 담은 뜻</span>
-              <p><strong>만약사주</strong>는 과거를 맞히거나 바꾸는 서비스가 아닙니다. “그때 다른 길을 골랐다면?”이라는 질문으로 지나온 선택을 돌아보고, 지금의 나를 이해할 단서를 찾는 사주 경험입니다.</p>
+              <p><strong>만약사주</strong>는 과거를 맞히거나 바꾸는 서비스가 아닙니다. 가지 않은 길이 더 나았을 거라는 생각은 혼자서는 정리되지 않습니다. 그 길에도 치를 대가가 있었다는 걸 사주로 보여드려, 지금의 선택을 다시 보게 하는 경험입니다.</p>
             </div>
             <p>결과는 명리 규칙을 결정론적으로 적용해 만든 반사실 서사이며, 실제로 일어났을 일을 주장하지 않습니다.</p>
             <dl>

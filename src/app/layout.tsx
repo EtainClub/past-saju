@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://ifsaju.com"),
   title: "만약사주 — 가지 않은 운",
-  description: "“그때 다른 길을 골랐다면?” 지나온 선택을 통해 지금의 나를 이해하는 사주 경험. 사주가 고른 세 개의 길 중 하나를 열어 가지 않은 3년을 읽습니다.",
+  description: "그때 그 선택, 아직도 후회되나요? 가지 않은 길에도 대가가 있었습니다. 당신의 사주로 그 3년을 읽어드립니다.",
   applicationName: "만약사주",
   alternates: { canonical: "/" },
   formatDetection: { telephone: false },
@@ -14,12 +14,12 @@ export const metadata: Metadata = {
     url: "/",
     locale: "ko_KR",
     title: "만약사주 — 가지 않은 운",
-    description: "“그때 다른 길을 골랐다면?” 사주가 고른 세 개의 길 중 하나를 열어 가지 않은 3년을 읽습니다.",
+    description: "그때 그 선택, 아직도 후회되나요? 가지 않은 길에도 대가가 있었습니다.",
   },
   twitter: {
     card: "summary_large_image",
     title: "만약사주 — 가지 않은 운",
-    description: "“그때 다른 길을 골랐다면?” 사주가 고른 세 개의 길 중 하나를 열어 가지 않은 3년을 읽습니다.",
+    description: "그때 그 선택, 아직도 후회되나요? 가지 않은 길에도 대가가 있었습니다.",
   },
 };
 

@@ -149,12 +149,12 @@ export function createSocialImage() {
               지나온 선택으로 읽는 사주
             </div>
             <div style={{ display: "flex", flexDirection: "column", fontSize: 68, lineHeight: 1.16, fontWeight: 700, letterSpacing: "-0.055em" }}>
-              <div>그때, 다른 길을</div>
-              <div>걸었다면.</div>
+              <div>그때 그 선택,</div>
+              <div>아직도 후회되나요.</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", marginTop: 25, color: "#77736b", fontSize: 21, lineHeight: 1.55 }}>
-              <div>세 개의 길 중 하나를 열어</div>
-              <div>가지 않은 3년을 읽습니다.</div>
+              <div>가지 않은 길에도 대가가 있었습니다.</div>
+              <div>당신의 사주로 그 3년을 읽어드립니다.</div>
             </div>
           </div>
         </div>
