@@ -269,6 +269,11 @@ export type SavedReading = {
   eventDate: string;
   /** 선택한 카드의 제목. 목록에서 어떤 이야기였는지 알아보게 한다. */
   title: string | null;
+  /**
+   * 열었던 카드 위치. 재열람에 필요하다 — 다른 슬롯을 요청하면 저장소가
+   * conflict 를 낸다(봉인은 한 번만 열린다).
+   */
+  slot: number | null;
 };
 
 export type SaveVerdict = "saved" | "missing" | "forbidden";
@@ -317,6 +322,7 @@ export async function listSavedReadings(uid: string, limit = 20): Promise<SavedR
     category: session.input.event.category,
     eventDate: session.input.event.date,
     title: session.selectedSlot === undefined ? null : session.choices[session.selectedSlot]?.title ?? null,
+    slot: session.selectedSlot ?? null,
   });
 
   if (!shouldUseFirestore()) {

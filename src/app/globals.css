@@ -302,6 +302,30 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .save-box .secondary-button { align-self: flex-start; margin-top: .3rem; }
 .save-box.saved strong { color: var(--wine); }
 .save-error { font-size: .62rem; color: #94424b; }
+
+/* ── 하단 탭 (모바일 전용) ─────────────────────────────────────────────
+   데스크톱에서는 숨긴다. 화면 아래를 고정으로 먹을 이유가 없고, 이 서비스는
+   한 번에 한 화면만 쓰므로 상단 흐름만으로 충분하다. */
+.bottom-nav { display: none; }
+
+.tab-page { padding: 1.6rem 1.5rem 2rem; max-width: 40rem; margin: 0 auto; }
+.tab-page h1 { font-family: "Iowan Old Style", "AppleMyungjo", Georgia, serif; font-size: 1.75rem; font-weight: 600; letter-spacing: -.045em; line-height: 1.35; margin: .5rem 0 .9rem; }
+.tab-intro { font-size: .74rem; color: var(--faint); line-height: 1.75; margin: 0 0 1.3rem; }
+.tab-intro b { color: var(--ink); font-weight: 600; }
+
+.archive-list { list-style: none; display: flex; flex-direction: column; gap: .6rem; padding: 0; margin: 1.2rem 0 0; }
+.archive-list button { display: flex; flex-direction: column; gap: .28rem; width: 100%; text-align: left; padding: 1rem 1.1rem; border: 1px solid rgba(43,39,36,.1); border-radius: .9rem; background: rgba(234,229,220,.42); cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+.archive-list button:hover:not(:disabled) { background: rgba(234,229,220,.72); border-color: rgba(122,29,47,.24); }
+.archive-list button:disabled { opacity: .5; cursor: default; }
+.archive-title { font-family: "Iowan Old Style", "AppleMyungjo", Georgia, serif; font-size: 1rem; font-weight: 600; letter-spacing: -.03em; }
+.archive-meta { font-size: .66rem; color: var(--wine); }
+.archive-date { font-size: .6rem; color: var(--faint); }
+
+.more-card { display: flex; flex-direction: column; gap: .45rem; padding: 1.05rem 1.15rem; margin-bottom: .75rem; border-radius: .9rem; background: rgba(234,229,220,.42); }
+.more-card strong { font-size: .74rem; font-weight: 600; }
+.more-card span { font-size: .68rem; color: var(--faint); line-height: 1.7; }
+.more-card b { color: var(--ink); font-weight: 600; }
+.more-card .secondary-button { align-self: flex-start; margin-top: .25rem; }
 .event-footer { margin-top: 1.7rem; }
 .spinner { width: .85rem; height: .85rem; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; }
 .error-panel { padding: 1rem 1.1rem; border-radius: .8rem; background: #f3e6e4; color: #6e353b; margin: 1.2rem 0 0; display: grid; gap: .35rem; font-size: .75rem; }
@@ -471,6 +495,29 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 
 @media (max-width: 680px) {
+  /* 모바일에서만 앱처럼 하단 탭을 띄운다. 엄지 반경 안의 유일한 자리다. */
+  .bottom-nav {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: rgba(247,244,238,.94); backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(43,39,36,.09);
+    /* 홈 인디케이터가 있는 기기에서 버튼이 가려지지 않게 한다. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .bottom-nav button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .18rem;
+    /* 최소 터치 영역 44px 을 확보한다. */
+    min-height: 3.4rem; padding: .5rem 0 .45rem;
+    border: 0; background: none; color: var(--faint); cursor: pointer;
+    transition: color .18s ease;
+  }
+  .bottom-nav button b { font-size: 1.02rem; line-height: 1; font-weight: 400; }
+  .bottom-nav button span { font-size: .58rem; letter-spacing: -.02em; }
+  .bottom-nav button[aria-current="page"] { color: var(--wine); }
+  .bottom-nav button[aria-current="page"] b { font-weight: 600; }
+  /* 마지막 요소가 바에 가리지 않도록 여백을 준다. */
+  .app-shell { padding-bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px)); }
+
   .topbar { height: 4.5rem; padding: 0 1rem; grid-template-columns: 1fr auto; }
   .progress-wrap { position: absolute; left: 1rem; right: 1rem; bottom: -.15rem; width: auto; grid-template-columns: auto 1fr; }
   .icon-button { grid-column: 2; }
@@ -577,6 +624,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .slider-group { background: rgba(255,255,255,.045); }
   .example-hint { background: rgba(255,255,255,.035); border-color: rgba(208,154,160,.28); }
   .save-box { background: rgba(255,255,255,.045); }
+  .bottom-nav { background: rgba(28,26,24,.94); border-top-color: rgba(255,255,255,.09); }
+  .bottom-nav button[aria-current="page"] { color: #edbdc2; }
+  .archive-list button { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.09); }
+  .archive-list button:hover:not(:disabled) { background: rgba(255,255,255,.075); border-color: rgba(208,154,160,.3); }
+  .archive-meta { color: #edbdc2; }
+  .more-card { background: rgba(255,255,255,.04); }
+  .more-card b, .tab-intro b { color: #efe9df; }
   .save-box.saved strong { color: #edbdc2; }
   .save-box b { color: #efe9df; }
   .example-hint-head span { color: #edbdc2; }

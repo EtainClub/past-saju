@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
 import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, warmAppCheck, type AuthState } from "@/lib/firebase-client";
@@ -227,6 +227,103 @@ function SliderField({ label, hint, low, high, value, onChange }: { label: strin
   );
 }
 
+type Tab = "story" | "archive" | "more";
+type SavedItem = { id: string; createdAt: number; category: string; eventDate: string; title: string | null; slot: CardSlot | null };
+
+/**
+ * 하단 탭. **모바일에서만 보인다**(CSS `.bottom-nav`).
+ *
+ * 데스크톱은 스크롤 여유가 있어 하단 고정 바가 화면만 먹는다. 모바일에서는
+ * 엄지 반경 안에 있는 유일한 자리라 앱처럼 쓰이려면 여기가 맞다.
+ */
+const TABS: Array<{ key: Tab; label: string; glyph: string }> = [
+  { key: "story", label: "이야기", glyph: "◇" },
+  { key: "archive", label: "보관함", glyph: "▤" },
+  { key: "more", label: "더보기", glyph: "⋯" },
+];
+
+function BottomNav({ current, onSelect }: { current: Tab; onSelect: (tab: Tab) => void }) {
+  return (
+    <nav className="bottom-nav" aria-label="주요 화면">
+      {TABS.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          aria-current={current === item.key ? "page" : undefined}
+          onClick={() => onSelect(item.key)}
+        >
+          <b aria-hidden="true">{item.glyph}</b>
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * 보관함.
+ *
+ * 목록은 요약만 받는다 — 서사 본문은 열었을 때만 온다. 항목을 누르면
+ * 기존 스트림 경로로 재열람하며, 서버가 저장해 둔 결과를 그대로 내므로
+ * **LLM 을 다시 부르지 않는다.**
+ */
+function ArchiveScreen({
+  items, error, linked, onLink, onOpen, onRetry,
+}: {
+  items: SavedItem[] | null;
+  error: string | null;
+  linked: boolean;
+  onLink: () => void;
+  onOpen: (item: SavedItem) => void;
+  onRetry: () => void;
+}) {
+  if (!linked) {
+    return (
+      <main className="tab-page">
+        <p className="eyebrow"><span />보관함</p>
+        <h1>저장한 이야기를<br />여기서 다시 봅니다.</h1>
+        <p className="tab-intro">
+          결과 화면에서 <b>보관하기</b>를 누르면 이곳에 쌓입니다. 기기를 바꿔도 남으려면
+          구글 계정 연결이 필요해요.
+        </p>
+        <button className="primary-button" type="button" onClick={onLink}>구글 계정으로 시작하기</button>
+      </main>
+    );
+  }
+
+  return (
+    <main className="tab-page">
+      <p className="eyebrow"><span />보관함</p>
+      <h1>보관한 이야기</h1>
+      {error && (
+        <div className="error-panel" role="alert">
+          <strong>{error}</strong>
+          <button className="secondary-button" type="button" onClick={onRetry}>다시 불러오기</button>
+        </div>
+      )}
+      {!error && items === null && <p className="tab-intro">불러오는 중이에요…</p>}
+      {!error && items?.length === 0 && (
+        <p className="tab-intro">아직 보관한 이야기가 없어요. 결과 화면 아래에서 보관할 수 있습니다.</p>
+      )}
+      {!!items?.length && (
+        <ul className="archive-list">
+          {items.map((item) => (
+            <li key={item.id}>
+              <button type="button" onClick={() => onOpen(item)} disabled={item.slot === null}>
+                <span className="archive-title">{item.title ?? "열지 않은 이야기"}</span>
+                <span className="archive-meta">{item.category} · {item.eventDate}</span>
+                <span className="archive-date">
+                  {new Date(item.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}에 봄
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}
+
 /**
  * 결과를 본 **뒤에** 나오는 보관 제안.
  *
@@ -298,6 +395,9 @@ export function IfSajuExperience() {
   const [showExample, setShowExample] = useState(false);
   const [auth, setAuth] = useState<AuthState>(null);
   const [saveState, setSaveState] = useState<"idle" | "working" | "saved" | "failed">("idle");
+  const [tab, setTab] = useState<Tab>("story");
+  const [savedList, setSavedList] = useState<SavedItem[] | null>(null);
+  const [savedError, setSavedError] = useState<string | null>(null);
   const [showOptional, setShowOptional] = useState(false);
   const [session, setSession] = useState<SessionEnvelope | null>(null);
   const [candidate, setCandidate] = useState<CardSlot | null>(null);
@@ -495,8 +595,33 @@ export function IfSajuExperience() {
   async function openCard() {
     if (candidate === null || !session || isStreaming) return;
     const slot = candidate;
-    setSelectedSlot(slot);
     setCandidate(null);
+    // 세션 생성 시 받아 둔 커밋먼트와 교차 검증한다 — 서버가 다른 카드를
+    // 내주지 않았음을 확인하는 유일한 방법이다.
+    await streamReading(session.sessionId, slot, session.choiceCommitments[slot]);
+  }
+
+  /**
+   * 카드를 열고 본문을 받는다. 최초 공개와 재열람이 같은 경로를 쓴다.
+   *
+   * 재열람은 LLM 을 다시 부르지 않는다 — 서버가 `firstSelection` 으로 막고
+   * 저장된 결과를 그대로 낸다. 보관함에서 여는 것도 여기로 온다.
+   *
+   * `expectedCommitment` 는 세션 생성 시 받은 목록의 값이다. 보관함에서
+   * 열 때는 그 목록이 없으므로 **교차 검증만 생략**하고 해시 자체 검증은 한다.
+   */
+  async function streamReading(sessionId: string, slot: CardSlot, expectedCommitment?: string) {
+    if (isStreaming) return;
+    setSelectedSlot(slot);
+    setOverview([]);
+    setTimeline([]);
+    setBalance(null);
+    setCommonFate("");
+    setBasis(null);
+    setClosing(null);
+    setReveal(null);
+    setFeedback("");
+    setSaveState("idle");
     setStage("reading");
     setIsStreaming(true);
     setError(null);
@@ -504,7 +629,7 @@ export function IfSajuExperience() {
       const response = await fetch("/api/reading/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
-        body: JSON.stringify({ sessionId: session.sessionId, slot }),
+        body: JSON.stringify({ sessionId, slot }),
       });
       if (!response.ok || !response.body) {
         const data = await response.json();
@@ -525,7 +650,8 @@ export function IfSajuExperience() {
           if (chunk.type === "reveal") {
             setReveal(chunk.data);
             const verified = await sha256(`${chunk.data.sessionId}|${chunk.data.choiceId}|${chunk.data.choiceText}|${chunk.data.nonce}`);
-            setSealVerified(verified === chunk.data.commitment && session.choiceCommitments[slot] === chunk.data.commitment);
+            const crossChecked = expectedCommitment === undefined || expectedCommitment === chunk.data.commitment;
+            setSealVerified(verified === chunk.data.commitment && crossChecked);
           }
           if (chunk.type === "overview") setOverview((current) => [...current, chunk.data.paragraph]);
           if (chunk.type === "timeline") setTimeline((current) => [...current, chunk.data.item]);
@@ -566,6 +692,39 @@ export function IfSajuExperience() {
     await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json", ...(await requestHeaders()) }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
   }
 
+  /** 보관함 목록. 탭을 열 때와 저장 직후에 부른다. */
+  const loadArchive = useCallback(async () => {
+    setSavedError(null);
+    try {
+      const response = await fetch("/api/reading/saved", { headers: await requestHeaders() });
+      if (response.status === 401) { setSavedList(null); return; }
+      if (!response.ok) throw new Error("목록을 불러오지 못했어요.");
+      const data = (await response.json()) as { readings: SavedItem[] };
+      setSavedList(data.readings);
+    } catch (error) {
+      setSavedError(error instanceof Error ? error.message : "목록을 불러오지 못했어요.");
+    }
+  }, []);
+
+  /**
+   * 탭 전환. 보관함을 열 때 그 자리에서 목록을 부른다.
+   *
+   * effect 로 하지 않는 이유: 탭 상태를 보고 부르면 "왜 요청이 나갔는지"가
+   * 사용자 동작과 분리된다. 여기서 부르면 누른 것과 요청이 한자리에 있다.
+   */
+  function selectTab(next: Tab) {
+    setTab(next);
+    if (next === "archive" && auth && !auth.isAnonymous && savedList === null) void loadArchive();
+  }
+
+  /** 보관함에서 구글 연동만 먼저 하는 경로. */
+  async function linkFromArchive() {
+    const linked = await linkGoogleAccount();
+    if (!linked.ok) return;
+    setAuth(await currentAuthState());
+    void loadArchive();
+  }
+
   /**
    * 이 이야기를 오래 보관한다.
    *
@@ -593,6 +752,8 @@ export function IfSajuExperience() {
         body: JSON.stringify({ sessionId: session.sessionId }),
       });
       setSaveState(response.ok ? "saved" : "failed");
+      // 보관함을 열었을 때 방금 저장한 것이 빠져 있으면 안 된다.
+      if (response.ok) setSavedList(null);
     } catch {
       setSaveState("failed");
     }
@@ -612,7 +773,7 @@ export function IfSajuExperience() {
         <button className="icon-button" type="button" onClick={openInfo} aria-label="서비스 안내"><span>?</span></button>
       </header>
 
-      {stage === "landing" && (
+      {tab === "story" && stage === "landing" && (
         <main className="landing" ref={mainRef} tabIndex={-1}>
           <div className="hero-copy">
             <p className="eyebrow"><span />만약사주의 첫 번째 이야기</p>
@@ -640,7 +801,7 @@ export function IfSajuExperience() {
         </main>
       )}
 
-      {stage === "birth" && (
+      {tab === "story" && stage === "birth" && (
         <main className="form-page" ref={mainRef} tabIndex={-1}>
           <button className="back-button" type="button" onClick={() => setStage("landing")}><Arrow direction="left" /> 돌아가기</button>
           <section className="form-heading">
@@ -731,7 +892,7 @@ export function IfSajuExperience() {
         </main>
       )}
 
-      {stage === "event" && (
+      {tab === "story" && stage === "event" && (
         <main className="form-page event-page" ref={mainRef} tabIndex={-1}>
           <button className="back-button" type="button" onClick={() => setStage("birth")}><Arrow direction="left" /> 출생 정보</button>
           <section className="form-heading compact-heading">
@@ -754,7 +915,7 @@ export function IfSajuExperience() {
         </main>
       )}
 
-      {stage === "cards" && session && (
+      {tab === "story" && stage === "cards" && session && (
         <main className="cards-page" ref={mainRef} tabIndex={-1}>
           <p className="eyebrow centered"><span />세 갈래의 가능성</p>
           <h1>마음이 가는 한 장을<br />골라주세요.</h1>
@@ -767,7 +928,7 @@ export function IfSajuExperience() {
         </main>
       )}
 
-      {stage === "reading" && (
+      {tab === "story" && stage === "reading" && (
         <main className="reading-page" ref={mainRef} tabIndex={-1}>
           <section className={`reveal-hero ${reveal ? "is-revealed" : ""}`}>
             <div className={`selected-stack ${cardVariant(selectedSlot ?? reveal?.slot ?? 0)}`} aria-hidden="true"><span /><span /><div className="selected-card"><CardArtwork slot={selectedSlot ?? reveal?.slot ?? 0} /></div></div>
@@ -820,6 +981,58 @@ export function IfSajuExperience() {
           </section>
         </div>
       )}
+
+      {tab === "archive" && (
+        <ArchiveScreen
+          items={savedList}
+          error={savedError}
+          linked={Boolean(auth && !auth.isAnonymous)}
+          onLink={linkFromArchive}
+          onRetry={loadArchive}
+          onOpen={(item) => {
+            if (item.slot === null) return;
+            setTab("story");
+            // 보관함에서 여는 것이므로 원본 커밋먼트 목록이 없다.
+            // 해시 자체 검증은 그대로 하고 교차 검증만 생략한다.
+            void streamReading(item.id, item.slot);
+          }}
+        />
+      )}
+
+      {tab === "more" && (
+        <main className="tab-page">
+          <p className="eyebrow"><span />더보기</p>
+          <h1>내 정보</h1>
+          <div className="more-card">
+            <strong>계정</strong>
+            {auth && !auth.isAnonymous
+              ? <span>{auth.name ? `${auth.name} 님으로 연결됨` : "구글 계정으로 연결됨"}. 보관한 이야기를 어느 기기에서나 볼 수 있어요.</span>
+              : <span>지금은 연결하지 않은 상태예요. 연결하면 보관한 이야기를 기기를 바꿔도 볼 수 있습니다.</span>}
+            {(!auth || auth.isAnonymous) && (
+              <button className="secondary-button" type="button" onClick={linkFromArchive}>구글 계정 연결하기</button>
+            )}
+          </div>
+          <div className="more-card">
+            <strong>입력 예시</strong>
+            <span>처음 쓸 때 보이던 예시를 다시 켤 수 있어요.</span>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => { localStorage.removeItem("ifsaju-example-seen"); setShowExample(true); setTab("story"); }}
+            >
+              예시 다시 보기
+            </button>
+          </div>
+          <div className="more-card">
+            <strong>보관 기간</strong>
+            <span>보관하지 않은 기록은 <b>7일</b> 뒤 자동으로 지워집니다. 보관을 선택한 기록은 <b>1년</b>간 남습니다.</span>
+          </div>
+          <p className="legal-links"><Link href="/privacy">개인정보처리방침</Link> · <Link href="/terms">이용약관</Link></p>
+          <p className="support-note">죽음·폭력·심각한 사고처럼 마음을 크게 다치게 한 사건은 자동 해석하지 않습니다. 위기 시 자살예방상담 109, 정신건강 위기상담 1577-0199에 연락하세요.</p>
+        </main>
+      )}
+
+      <BottomNav current={tab} onSelect={selectTab} />
     </div>
   );
 }

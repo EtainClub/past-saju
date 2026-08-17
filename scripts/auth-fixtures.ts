@@ -82,7 +82,7 @@ assert.equal(listB[0].id, other.id);
 // ── 6. 목록에 본문이 실리지 않는가 ──────────────────────────────────────
 // 목록은 요약만 낸다. 서사 본문이 새면 노출 범위가 넓어진다.
 const keys = Object.keys(listB[0]).sort().join(",");
-assert.equal(keys, "category,createdAt,eventDate,id,title", `목록 필드가 늘었다: ${keys}`);
+assert.equal(keys, "category,createdAt,eventDate,id,slot,title", `목록 필드가 늘었다: ${keys}`);
 
 // ── 7. 저장하면 만료가 실제로 밀리는가 ──────────────────────────────────
 // saved 플래그만 세우고 TTL 을 안 밀면 7일에 그대로 지워진다.
