@@ -106,14 +106,23 @@ env:
     secret: NEXT_PUBLIC_FIREBASE_APP_ID
     availability: [BUILD, RUNTIME]
 
+  # reCAPTCHA Enterprise 사이트 키. 이게 있어야 클라이언트가 App Check
+  # 토큰을 발급한다. 없으면 조용히 비활성화되고 방어는 속도 제한뿐이다.
+  # 브라우저에 노출되는 공개 값이지만 다른 키들과 같은 자리에 둔다.
+  - variable: NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY
+    secret: NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY
+    availability: [BUILD, RUNTIME]
+
   # 없으면 LLM 전 경로가 비활성화된다(오류가 아니라 템플릿 폴백).
   - variable: ANTHROPIC_API_KEY
     secret: ANTHROPIC_API_KEY
     availability: [RUNTIME]
 
-# ── 아직 설정하지 않은 것 ─────────────────────────────────────────────
-# NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY (reCAPTCHA Enterprise 사이트 키)
-#   이 값이 없으면 클라이언트가 App Check 토큰을 발급하지 않는다.
-#   서버는 monitor 라 통과시키지만 **App Check 의 실효 방어는 0**이고,
-#   현재 방어는 IP 기준 속도 제한뿐이다. 콘솔에서 키를 발급한 뒤
-#   secret 으로 추가하고 APP_CHECK_MODE 를 enforce 로 올릴 것.
+# ── 배포 후 순서대로 확인할 것 ────────────────────────────────────────
+# 1. App Check 로그 — 사이트 키가 붙었으므로 토큰이 올라오기 시작한다.
+#    "missing" 이 사라지고 "ok" 만 남으면 APP_CHECK_MODE 를 enforce 로 올린다.
+#    지금 올리면 캐시된 구버전 클라이언트가 401 을 받는다.
+# 2. 429 발생률 — RATE_LIMIT_XFF_DEPTH 가 App Hosting 홉 수와 맞는지.
+#    어긋나면 모든 요청이 한 키로 묶여 과차단된다.
+# 3. internalMetrics — forkSource_*, renderSucceeded, renderFallback_*.
+#    LLM 경로가 실제로 도는지, 폴백률이 얼마인지.
