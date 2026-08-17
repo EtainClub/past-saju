@@ -218,9 +218,29 @@ function Brand() {
   );
 }
 
+/**
+ * 슬라이더를 만지기 시작할 때 열려 있던 키보드를 내린다.
+ *
+ * **실기기에서만 나는 문제였다.** 이야기를 쓰고 나면 textarea 에 포커스가
+ * 남고 가상 키보드가 떠 있다. 그 상태로 슬라이더를 움직이면 값이 바뀔 때마다
+ * 레이아웃이 갱신되고, 모바일 브라우저는 그때 **포커스된 요소를 화면 안으로
+ * 되돌린다.** 초점이 이야기 칸으로 옮겨간 것처럼 보이지만 실은 떠난 적이 없다.
+ *
+ * 데스크톱에는 가상 키보드도, 이 되돌리기 동작도 없다. 그래서 창을 모바일
+ * 크기로 줄여 봐도 재현되지 않는다 — 화면 크기가 아니라 입력기의 문제다.
+ */
+function dismissKeyboard() {
+  const active = document.activeElement;
+  const isTextEntry = active instanceof HTMLTextAreaElement
+    || (active instanceof HTMLInputElement && active.type !== "range");
+  if (isTextEntry) active.blur();
+}
+
 function SliderField({ label, hint, low, high, value, onChange }: { label: string; hint: string; low: string; high: string; value: number; onChange: (value: number) => void }) {
   return (
-    <label className="slider-field">
+    // 손가락이 닿는 순간 처리한다. 슬라이더 손잡이뿐 아니라 이 블록 어디를
+    // 눌러도 걸리도록 label 에 둔다.
+    <label className="slider-field" onPointerDown={dismissKeyboard}>
       <span className="slider-title"><span>{label}</span><output>{value}</output></span>
       <small className="slider-hint">{hint}</small>
       <input type="range" min="1" max="5" step="1" value={value} onChange={(event) => onChange(Number(event.target.value))} />
