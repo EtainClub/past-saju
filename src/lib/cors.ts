@@ -25,6 +25,29 @@ function allowedOrigins() {
 }
 
 /**
+ * 아직 모르는 출처를 프로세스마다 한 번씩만 기록한다.
+ *
+ * 거절은 조용히 해도 되지만, **값을 모르면 허용 목록에 넣을 수가 없다.**
+ * 토스 WebView 의 Origin 이 딱 그렇다 — 실물을 한 번 열어봐야 알 수 있는데,
+ * 그때 로그에 안 남으면 "안 된다"만 알고 끝난다.
+ *
+ * WebView 는 요청마다 같은 출처를 보내므로 매번 찍으면 로그가 잠긴다.
+ * 처음 본 값만 남긴다.
+ */
+const reportedOrigins = new Set<string>();
+
+function reportUnknownOrigin(origin: string) {
+  // 헤더는 클라이언트가 정하는 값이다. 줄바꿈으로 로그를 위조하지 못하게 자른다.
+  const safe = origin.replace(/[\r\n]/g, " ").slice(0, 120);
+  if (reportedOrigins.has(safe)) return;
+  // 무작위 출처를 흘려 넣어 메모리를 불리는 걸 막는다. 넘치면 더 안 담을 뿐,
+  // 이미 담긴 값의 중복 억제는 계속 동작한다.
+  if (reportedOrigins.size >= 50) return;
+  reportedOrigins.add(safe);
+  console.warn(`CORS 미허용 출처: ${safe} — 토스 WebView 라면 TOSS_ALLOWED_ORIGINS 에 넣는다`);
+}
+
+/**
  * 요청 Origin 이 허용 목록에 있으면 CORS 헤더를 만든다.
  *
  * 없으면 **빈 객체**를 돌려준다 — 헤더를 안 붙이면 브라우저가 알아서 막는다.
@@ -32,7 +55,11 @@ function allowedOrigins() {
  */
 export function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("origin");
-  if (!origin || !allowedOrigins().includes(origin)) return {};
+  if (!origin) return {};
+  if (!allowedOrigins().includes(origin)) {
+    reportUnknownOrigin(origin);
+    return {};
+  }
   return {
     "Access-Control-Allow-Origin": origin,
     // 출처마다 응답이 다르므로 캐시가 섞이지 않게 한다.
