@@ -13,10 +13,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기묘",
+      "month": "정축",
+      "day": "임진",
+      "hour": "경술"
     },
     "engineOutput": {
       "year": "기묘",
@@ -39,10 +39,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경진",
+      "month": "무인",
+      "day": "임진",
+      "hour": "신해"
     },
     "engineOutput": {
       "year": "경진",
@@ -65,16 +65,16 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기묘",
+      "month": "정축",
+      "day": "신묘",
+      "hour": "기해"
     },
     "engineOutput": {
       "year": "기묘",
       "month": "정축",
       "day": "신묘",
-      "hour": "무술"
+      "hour": "기해"
     }
   },
   {
@@ -91,10 +91,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기사",
+      "month": "병자",
+      "day": "경오",
+      "hour": "정해"
     },
     "engineOutput": {
       "year": "기사",
@@ -117,10 +117,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기사",
+      "month": "정축",
+      "day": "경자",
+      "hour": "신사"
     },
     "engineOutput": {
       "year": "기사",
@@ -143,10 +143,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "무인",
+      "day": "경오",
+      "hour": "무인"
     },
     "engineOutput": {
       "year": "경오",
@@ -169,10 +169,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "기묘",
+      "day": "경자",
+      "hour": "신사"
     },
     "engineOutput": {
       "year": "경오",
@@ -195,16 +195,16 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "경진",
+      "day": "신미",
+      "hour": "기축"
     },
     "engineOutput": {
       "year": "경오",
       "month": "경진",
       "day": "신미",
-      "hour": "경인"
+      "hour": "기축"
     }
   },
   {
@@ -221,10 +221,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "신사",
+      "day": "임인",
+      "hour": "갑진"
     },
     "engineOutput": {
       "year": "경오",
@@ -247,10 +247,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "임오",
+      "day": "계유",
+      "hour": "신유"
     },
     "engineOutput": {
       "year": "경오",
@@ -273,10 +273,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "계미",
+      "day": "을사",
+      "hour": "무인"
     },
     "engineOutput": {
       "year": "경오",
@@ -299,10 +299,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "갑신",
+      "day": "병자",
+      "hour": "신묘"
     },
     "engineOutput": {
       "year": "경오",
@@ -325,10 +325,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "을유",
+      "day": "병오",
+      "hour": "기해"
     },
     "engineOutput": {
       "year": "경오",
@@ -351,16 +351,16 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "병술",
+      "day": "정축",
+      "hour": "경자"
     },
     "engineOutput": {
       "year": "경오",
       "month": "병술",
       "day": "정축",
-      "hour": "신축"
+      "hour": "경자"
     }
   },
   {
@@ -377,10 +377,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경오",
+      "month": "정해",
+      "day": "병오",
+      "hour": "정유"
     },
     "engineOutput": {
       "year": "경오",
@@ -403,10 +403,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "정유",
+      "month": "병오",
+      "day": "계해",
+      "hour": "정사"
     },
     "engineOutput": {
       "year": "정유",
@@ -429,10 +429,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기해",
+      "month": "정축",
+      "day": "임인",
+      "hour": "갑진"
     },
     "engineOutput": {
       "year": "기해",
@@ -455,10 +455,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을미",
+      "month": "갑신",
+      "day": "정묘",
+      "hour": "신해"
     },
     "engineOutput": {
       "year": "을미",
@@ -481,10 +481,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "정묘",
+      "month": "정미",
+      "day": "을축",
+      "hour": "임오"
     },
     "engineOutput": {
       "year": "정묘",
@@ -507,10 +507,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "무진",
+      "month": "경신",
+      "day": "정유",
+      "hour": "갑진"
     },
     "engineOutput": {
       "year": "무진",
@@ -533,10 +533,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기해",
+      "month": "경오",
+      "day": "무자",
+      "hour": "경신"
     },
     "engineOutput": {
       "year": "기해",
@@ -548,7 +548,7 @@
   {
     "id": "jasi-2250",
     "group": "자시 경계",
-    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "note": "자시설: 23시대 출생은 일주까지 다음날로 넘어갑니다 (프로파일 jasi)",
     "input": {
       "date": "1995-05-20",
       "time": "22:50",
@@ -559,10 +559,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "기해"
     },
     "engineOutput": {
       "year": "을해",
@@ -574,7 +574,7 @@
   {
     "id": "jasi-2305",
     "group": "자시 경계",
-    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "note": "자시설: 23시대 출생은 일주까지 다음날로 넘어갑니다 (프로파일 jasi)",
     "input": {
       "date": "1995-05-20",
       "time": "23:05",
@@ -585,10 +585,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "기해"
     },
     "engineOutput": {
       "year": "을해",
@@ -600,7 +600,7 @@
   {
     "id": "jasi-2330",
     "group": "자시 경계",
-    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "note": "자시설: 23시대 출생은 일주까지 다음날로 넘어갑니다 (프로파일 jasi)",
     "input": {
       "date": "1995-05-20",
       "time": "23:30",
@@ -611,22 +611,22 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "기해"
     },
     "engineOutput": {
       "year": "을해",
       "month": "신사",
       "day": "신해",
-      "hour": "경자"
+      "hour": "기해"
     }
   },
   {
     "id": "jasi-2355",
     "group": "자시 경계",
-    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "note": "자시설: 23시대 출생은 일주까지 다음날로 넘어갑니다 (프로파일 jasi)",
     "input": {
       "date": "1995-05-20",
       "time": "23:55",
@@ -637,22 +637,22 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을해",
+      "month": "신사",
+      "day": "임자",
+      "hour": "경자"
     },
     "engineOutput": {
       "year": "을해",
       "month": "신사",
-      "day": "신해",
+      "day": "임자",
       "hour": "경자"
     }
   },
   {
     "id": "jasi-0010",
     "group": "자시 경계",
-    "note": "야자시설: 23시대 출생은 일주가 당일, 시주만 다음날 일간 기준 (프로파일 splitJasi)",
+    "note": "자시설: 23시대 출생은 일주까지 다음날로 넘어갑니다 (프로파일 jasi)",
     "input": {
       "date": "1995-05-20",
       "time": "00:10",
@@ -663,22 +663,22 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을해",
+      "month": "신사",
+      "day": "신해",
+      "hour": "무자"
     },
     "engineOutput": {
       "year": "을해",
       "month": "신사",
-      "day": "경술",
+      "day": "신해",
       "hour": "무자"
     }
   },
   {
     "id": "leap-2020-04",
     "group": "윤달",
-    "note": "2020년 윤4월",
+    "note": "2020년 윤4월 → 만세력에는 **양력 2020-06-06** 로 넣으세요 (음력 토글 쓰지 말 것)",
     "input": {
       "date": "2020-04-15",
       "time": "10:00",
@@ -704,7 +704,7 @@
   {
     "id": "leap-2017-05",
     "group": "윤달",
-    "note": "2017년 윤5월",
+    "note": "2017년 윤5월 → 만세력에는 **양력 2017-07-03** 로 넣으세요 (음력 토글 쓰지 말 것)",
     "input": {
       "date": "2017-05-10",
       "time": "18:30",
@@ -730,7 +730,7 @@
   {
     "id": "leap-2014-09",
     "group": "윤달",
-    "note": "2014년 윤9월",
+    "note": "2014년 윤9월 → 만세력에는 **양력 2014-11-14** 로 넣으세요 (음력 토글 쓰지 말 것)",
     "input": {
       "date": "2014-09-22",
       "time": "03:15",
@@ -767,9 +767,9 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
+      "year": "무오",
+      "month": "임술",
+      "day": "기사",
       "hour": ""
     },
     "engineOutput": {
@@ -793,9 +793,9 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
+      "year": "신사",
+      "month": "신묘",
+      "day": "경인",
       "hour": ""
     },
     "engineOutput": {
@@ -819,10 +819,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "을유",
+      "month": "갑신",
+      "day": "병진",
+      "hour": "신묘"
     },
     "engineOutput": {
       "year": "을유",
@@ -845,10 +845,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "계묘",
+      "month": "계해",
+      "day": "무인",
+      "hour": "계해"
     },
     "engineOutput": {
       "year": "계묘",
@@ -871,10 +871,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "신해",
+      "month": "경인",
+      "day": "을해",
+      "hour": "신사"
     },
     "engineOutput": {
       "year": "신해",
@@ -897,15 +897,15 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경신",
+      "month": "임오",
+      "day": "갑술",
+      "hour": "갑자"
     },
     "engineOutput": {
       "year": "경신",
       "month": "임오",
-      "day": "계유",
+      "day": "갑술",
       "hour": "갑자"
     }
   },
@@ -923,10 +923,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "신미",
+      "month": "을미",
+      "day": "병술",
+      "hour": "임진"
     },
     "engineOutput": {
       "year": "신미",
@@ -957,7 +957,7 @@
     "engineOutput": {
       "year": "기묘",
       "month": "병자",
-      "day": "정사",
+      "day": "무오",
       "hour": "임자"
     }
   },
@@ -975,15 +975,15 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기묘",
+      "month": "병자",
+      "day": "무오",
+      "hour": "임자"
     },
     "engineOutput": {
       "year": "기묘",
       "month": "병자",
-      "day": "정사",
+      "day": "무오",
       "hour": "임자"
     }
   },
@@ -1001,16 +1001,16 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "무자",
+      "month": "임술",
+      "day": "임오",
+      "hour": "정미"
     },
     "engineOutput": {
       "year": "무자",
       "month": "임술",
       "day": "임오",
-      "hour": "무신"
+      "hour": "정미"
     }
   },
   {
@@ -1027,10 +1027,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "계사",
+      "month": "병진",
+      "day": "신축",
+      "hour": "임진"
     },
     "engineOutput": {
       "year": "계사",
@@ -1053,10 +1053,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기해",
+      "month": "계유",
+      "day": "계해",
+      "hour": "신유"
     },
     "engineOutput": {
       "year": "기해",
@@ -1068,7 +1068,7 @@
   {
     "id": "regular-11",
     "group": "일반 회귀",
-    "note": "특이 조건 없는 대조군",
+    "note": "특이 조건 없는 대조군 → 만세력에는 **양력 1968-04-08** 로 넣으세요 (음력 토글 쓰지 말 것)",
     "input": {
       "date": "1968-03-11",
       "time": "13:40",
@@ -1094,7 +1094,7 @@
   {
     "id": "regular-12",
     "group": "일반 회귀",
-    "note": "특이 조건 없는 대조군",
+    "note": "특이 조건 없는 대조군 → 만세력에는 **양력 1985-01-17** 로 넣으세요 (음력 토글 쓰지 말 것)",
     "input": {
       "date": "1984-11-27",
       "time": "05:55",

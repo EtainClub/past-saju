@@ -87,7 +87,11 @@ function hourConfidenceBand(input: ReadingInput): NarrativeSpec["confidence"]["h
   );
   const [hours, minutes] = input.birth.time.split(":").map(Number);
   const longitude = CITY_LONGITUDE[input.birth.city] ?? KOREA_AVERAGE_LONGITUDE;
-  const trueMinutes = (hours * 60 + minutes + (longitude - 135) * 4 + equationOfTime(date) + 1440) % 1440;
+  // 균시차는 프로파일을 따른다. 명식은 안 쓰는데 경계 판정만 쓰면 두 시각이
+  // 어긋나 "경계"라는 경고 자체가 다른 순간을 가리킨다 — §7-11.
+  // (이 함수 전체가 명식과 별도 계산이라는 더 큰 결함은 §6-3, B3에서 해소)
+  const eot = DEFAULT_PROFILE.applyEquationOfTime ? equationOfTime(date) : 0;
+  const trueMinutes = (hours * 60 + minutes + (longitude - 135) * 4 + eot + 1440) % 1440;
   const branchBoundaryDistance = Math.min(...Array.from({ length: 12 }, (_, index) => {
     const boundary = (index * 120 + 60) % 1440;
     const d = Math.abs(trueMinutes - boundary);
@@ -113,7 +117,7 @@ function calculateChart(input: ReadingInput) {
     dayBoundary: DEFAULT_PROFILE.dayBoundary,
     trueSolarTime: {
       longitude: CITY_LONGITUDE[input.birth.city] ?? KOREA_AVERAGE_LONGITUDE,
-      applyEquationOfTime: true,
+      applyEquationOfTime: DEFAULT_PROFILE.applyEquationOfTime,
       applyHistoricalDst: true,
     },
   });
