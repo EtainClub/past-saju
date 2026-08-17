@@ -1,4 +1,5 @@
-import { classifySafety, createReadingSession } from "@/lib/reading-engine";
+import { createReadingSession } from "@/lib/reading-engine";
+import { classifySafetyDetailed, recordSafetyBlock } from "@/lib/safety";
 import { resolveSolarBirthDate } from "@/lib/birth-date";
 import { readingStoreBackend, saveReadingSession } from "@/lib/reading-store";
 import type { BirthInput, ReadingInput } from "@/lib/reading-types";
@@ -82,7 +83,11 @@ export async function POST(request: Request) {
     return Response.json({ code: "under-age", message: "만 14세 이상만 이용할 수 있어요." }, { status: 403 });
   }
 
-  if (classifySafety(input)) {
+  const safety = classifySafetyDetailed(input);
+  if (safety.blocked) {
+    // 사유 코드만 남긴다. 원문은 어디에도 저장하지 않는다.
+    // 이 집계가 있어야 오탐(정당한 소재인데 막힌 경우)을 근거로 조정할 수 있다.
+    await recordSafetyBlock(safety.reason);
     return Response.json(
       {
         code: "blocked-content",

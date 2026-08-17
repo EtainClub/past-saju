@@ -352,11 +352,8 @@ function buildNarrativeSpec(axis: TenGodAxis, context: EngineContext): Narrative
   };
 }
 
-export function classifySafety(input: ReadingInput) {
-  const text = `${input.event.story} ${input.event.outcome} ${input.event.alternative}`.toLowerCase();
-  const blocked = ["자살", "죽고", "죽었", "사망", "유산", "이혼", "폭력", "폭행", "성폭력", "강간", "학대", "살해", "교통사고", "사고로", "극단적 선택"];
-  return blocked.some((word) => text.includes(word));
-}
+// classifySafety 는 src/lib/safety.ts 로 옮겼다. L2와 같은 정규화를 써야 해서
+// (우회 대응, ROADMAP M1-C) 엔진이 아니라 안전 층에 두는 것이 맞다.
 
 /**
  * 순수 동기 함수. 동일 입력 + 동일 fork는 동일 심볼릭 출력을 낸다.

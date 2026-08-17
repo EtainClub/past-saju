@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Node에서 직접 실행하는 CommonJS 점검 스크립트 */
 /**
  * 운영 지표 조회 — 배포가 "됐는지"가 아니라 "도는지"를 본다.
  *
@@ -14,6 +15,7 @@ initializeApp({ credential: applicationDefault(), projectId: "pastsaju" });
 const db = getFirestore();
 
 const GROUPS = [
+  ["안전 차단 (사유별)", /^safetyBlock_/],
   ["L2 갈림길 분류", /^fork/],
   ["L5 렌더링", /^render/],
   ["기타", /.*/],
@@ -62,6 +64,16 @@ async function main() {
         + `  캐시쓰기 ${u[`${layer}_cacheWrite`] ?? 0}  캐시읽기 ${u[`${layer}_cacheRead`] ?? 0}`,
       );
     }
+  }
+
+  // 안전 차단률 — 너무 높으면 정당한 갈림길까지 막고 있다는 뜻이다(오탐).
+  const blocks = keys.filter((key) => key.startsWith("safetyBlock_"))
+    .reduce((sum, key) => sum + (data[key] ?? 0), 0);
+  const started = data.sessionsStarted ?? 0;
+  if (blocks && started) {
+    console.log(`\n=== 안전 차단률 ===`);
+    console.log(`  차단 ${blocks} / 시도 ${blocks + started} (${((blocks / (blocks + started)) * 100).toFixed(1)}%)`);
+    console.log(`  높으면 오탐 의심 — "이혼"·"교통사고"는 정당한 갈림길일 수 있다(ROADMAP M1-C).`);
   }
 
   // 폴백률 — A4 도입 의미가 살아 있는지 판정하는 값.

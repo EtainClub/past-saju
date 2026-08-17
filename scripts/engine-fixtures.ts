@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { strict as assert } from "node:assert";
-import { classifySafety, createReadingSession } from "../src/lib/reading-engine";
+import { createReadingSession } from "../src/lib/reading-engine";
+import { classifySafety } from "../src/lib/safety";
 import type { ReadingInput } from "../src/lib/reading-types";
 
 function fixture(overrides: Partial<ReadingInput> = {}): ReadingInput {
