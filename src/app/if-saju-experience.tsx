@@ -227,7 +227,18 @@ function SliderField({ label, hint, low, high, value, onChange }: { label: strin
   );
 }
 
-type Tab = "story" | "archive" | "more";
+type Tab = "story" | "chart" | "archive" | "more";
+
+type ChartSummary = {
+  pillars: Array<{ label: string; korean: string; hanja: string; stemElement: string; branchElement: string; stemTenGod: string | null; branchTenGod: string }>;
+  dayMaster: { korean: string; hanja: string; element: string };
+  elements: Array<{ element: string; count: number }>;
+  strength: { score: number; band: string };
+  axes: Array<{ axis: string; count: number }>;
+  luck: { available: boolean; reason: string | null; startAge: number; forward: boolean; pillars: Array<{ age: number; korean: string; current: boolean }> };
+  timeUnknown: boolean;
+  profileId: string;
+};
 type SavedItem = { id: string; createdAt: number; category: string; eventDate: string; title: string | null; slot: CardSlot | null };
 
 /**
@@ -238,6 +249,7 @@ type SavedItem = { id: string; createdAt: number; category: string; eventDate: s
  */
 const TABS: Array<{ key: Tab; label: string; glyph: string }> = [
   { key: "story", label: "이야기", glyph: "◇" },
+  { key: "chart", label: "내 사주", glyph: "☰" },
   { key: "archive", label: "보관함", glyph: "▤" },
   { key: "more", label: "더보기", glyph: "⋯" },
 ];
@@ -257,6 +269,125 @@ function BottomNav({ current, onSelect }: { current: Tab; onSelect: (tab: Tab) =
         </button>
       ))}
     </nav>
+  );
+}
+
+const ELEMENT_TONE: Record<string, string> = { 목: "wood", 화: "fire", 토: "earth", 금: "metal", 수: "water" };
+
+/**
+ * 내 사주 — 명식을 그 자체로 보여 준다.
+ *
+ * **해석하지 않는다.** 길흉·예언을 말하지 않고 계산된 것만 낸다. 서사(이야기 탭)가
+ * 해석을 맡고, 여기는 그 서사가 무엇 위에 서 있는지를 보여 주는 자리다.
+ *
+ * LLM 이 붙지 않으므로 비용이 0이고, 골든 43건으로 정확성이 고정돼 있다.
+ */
+function ChartScreen({
+  chart, error, hasBirth, onGoBirth, onRetry,
+}: {
+  chart: ChartSummary | null;
+  error: string | null;
+  hasBirth: boolean;
+  onGoBirth: () => void;
+  onRetry: () => void;
+}) {
+  if (!hasBirth) {
+    return (
+      <main className="tab-page">
+        <p className="eyebrow"><span />내 사주</p>
+        <h1>생년월일시를<br />먼저 알려주세요.</h1>
+        <p className="tab-intro">명식은 태어난 시각에서 나옵니다. 한 번 입력하면 이 기기에 저장돼 다시 묻지 않아요.</p>
+        <button className="primary-button" type="button" onClick={onGoBirth}>생년월일 입력하기 <Arrow /></button>
+      </main>
+    );
+  }
+
+  return (
+    <main className="tab-page">
+      <p className="eyebrow"><span />내 사주</p>
+      <h1>내 명식</h1>
+      {error && (
+        <div className="error-panel" role="alert">
+          <strong>{error}</strong>
+          <button className="secondary-button" type="button" onClick={onRetry}>다시 계산하기</button>
+        </div>
+      )}
+      {!error && !chart && <p className="tab-intro">계산하는 중이에요…</p>}
+      {chart && (
+        <>
+          <p className="tab-intro">
+            일간은 <b>{chart.dayMaster.korean}({chart.dayMaster.hanja})</b>, 오행으로는 <b>{chart.dayMaster.element}</b>입니다.
+            사주에서 &lsquo;나&rsquo;를 가리키는 글자예요.
+          </p>
+
+          <div className="pillar-grid">
+            {chart.pillars.map((pillar) => (
+              <div key={pillar.label} className={`pillar-card ${pillar.label === "일주" ? "is-day" : ""}`}>
+                <span className="pillar-label">{pillar.label}</span>
+                <span className="pillar-hanja">{pillar.hanja}</span>
+                <span className="pillar-korean">{pillar.korean}</span>
+                <span className="pillar-gods">
+                  <i className={`el el-${ELEMENT_TONE[pillar.stemElement]}`}>{pillar.stemElement}</i>
+                  {pillar.stemTenGod ?? "나"} · {pillar.branchTenGod}
+                  <i className={`el el-${ELEMENT_TONE[pillar.branchElement]}`}>{pillar.branchElement}</i>
+                </span>
+              </div>
+            ))}
+          </div>
+          {chart.timeUnknown && (
+            <p className="chart-note">
+              태어난 시각을 모르셔서 <b>시주는 빼고</b> 계산했어요. 임의로 채우면 명식 전체가 틀어집니다.
+            </p>
+          )}
+
+          <h2 className="chart-heading">오행 분포</h2>
+          <ul className="element-bars">
+            {chart.elements.map((item) => (
+              <li key={item.element}>
+                <span className="element-name">{item.element}</span>
+                <span className="element-track">
+                  <i className={`el-${ELEMENT_TONE[item.element]}`} style={{ width: `${(item.count / (chart.timeUnknown ? 6 : 8)) * 100}%` }} />
+                </span>
+                <span className="element-count">{item.count}</span>
+              </li>
+            ))}
+          </ul>
+
+          <h2 className="chart-heading">기운의 세기</h2>
+          <div className="more-card">
+            <strong>{chart.strength.band} · {chart.strength.score}점</strong>
+            <span>
+              일간을 돕는 글자가 얼마나 있는지로 셉니다. <b>{chart.strength.band}</b>은 좋고 나쁨이 아니라
+              어느 쪽으로 기울어 있는지를 말해요. 이야기 탭의 세 갈래를 고를 때 함께 쓰입니다.
+            </span>
+          </div>
+
+          <h2 className="chart-heading">대운</h2>
+          {chart.luck.available ? (
+            <>
+              <p className="tab-intro">
+                {chart.luck.startAge}세부터 10년 단위로 바뀌며, {chart.luck.forward ? "순행" : "역행"}합니다.
+              </p>
+              <ul className="luck-list">
+                {chart.luck.pillars.slice(0, 8).map((pillar) => (
+                  <li key={pillar.age} className={pillar.current ? "current" : ""}>
+                    <span>{pillar.age}세</span>
+                    <b>{pillar.korean}</b>
+                    {pillar.current && <em>지금</em>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="chart-note">{chart.luck.reason}</p>
+          )}
+
+          <p className="chart-foot">
+            유파 {chart.profileId} · 자시설·균시차 미적용 기준으로 계산했어요. 이 화면은 길흉을 말하지 않습니다.
+          </p>
+        </>
+      )}
+    </main>
   );
 }
 
@@ -398,6 +529,8 @@ export function IfSajuExperience() {
   const [tab, setTab] = useState<Tab>("story");
   const [savedList, setSavedList] = useState<SavedItem[] | null>(null);
   const [savedError, setSavedError] = useState<string | null>(null);
+  const [chartSummary, setChartSummary] = useState<ChartSummary | null>(null);
+  const [chartError, setChartError] = useState<string | null>(null);
   const [showOptional, setShowOptional] = useState(false);
   const [session, setSession] = useState<SessionEnvelope | null>(null);
   const [candidate, setCandidate] = useState<CardSlot | null>(null);
@@ -562,6 +695,8 @@ export function IfSajuExperience() {
     const normalizedBirth = { ...birth, city };
     setBirth(normalizedBirth);
     localStorage.setItem("ifsaju-birth", JSON.stringify(normalizedBirth));
+    // 출생 정보가 바뀌면 이전 명식은 남의 것이다. 다음에 「내 사주」를 열 때 다시 계산한다.
+    setChartSummary(null);
     setStage("event");
   }
 
@@ -712,9 +847,27 @@ export function IfSajuExperience() {
    * effect 로 하지 않는 이유: 탭 상태를 보고 부르면 "왜 요청이 나갔는지"가
    * 사용자 동작과 분리된다. 여기서 부르면 누른 것과 요청이 한자리에 있다.
    */
+  /** 명식 계산. 순수 계산이라 LLM 도 저장소 쓰기도 없다. */
+  const loadChart = useCallback(async (target: BirthInput) => {
+    setChartError(null);
+    try {
+      const response = await fetch("/api/chart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
+        body: JSON.stringify({ birth: target }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "명식을 계산하지 못했어요.");
+      setChartSummary(data.chart as ChartSummary);
+    } catch (error) {
+      setChartError(error instanceof Error ? error.message : "명식을 계산하지 못했어요.");
+    }
+  }, []);
+
   function selectTab(next: Tab) {
     setTab(next);
     if (next === "archive" && auth && !auth.isAnonymous && savedList === null) void loadArchive();
+    if (next === "chart" && birth.date && chartSummary === null) void loadChart(birth);
   }
 
   /** 보관함에서 구글 연동만 먼저 하는 경로. */
@@ -980,6 +1133,16 @@ export function IfSajuExperience() {
             <button className="secondary-button full-button" type="button" onClick={() => setShowInfo(false)}>확인했어요</button>
           </section>
         </div>
+      )}
+
+      {tab === "chart" && (
+        <ChartScreen
+          chart={chartSummary}
+          error={chartError}
+          hasBirth={Boolean(birth.date)}
+          onGoBirth={() => { setTab("story"); setStage("birth"); }}
+          onRetry={() => loadChart(birth)}
+        />
       )}
 
       {tab === "archive" && (
