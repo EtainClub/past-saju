@@ -1,4 +1,4 @@
-import { getAnthropic, MODEL } from "../src/lib/llm/client";
+import { getAnthropic, modelFor } from "../src/lib/llm/client";
 import { buildClassifyRequest } from "../src/lib/fork/classify-llm";
 import { buildRenderRequest, merge, parseProse } from "../src/lib/render/llm";
 import { checkFidelity } from "../src/lib/render/fidelity";
@@ -103,6 +103,18 @@ type Usage = {
   cache_read_input_tokens?: number | null;
 };
 
+/**
+ * 비교용 카드 선택 — **결정론이어야 한다.**
+ *
+ * `choices[0]`을 쓰면 안 된다. 카드 슬롯 배치는 봉인 UX상 난수라
+ * (`reading-engine.ts`의 randomBytes), 실행마다 다른 축이 뽑힌다.
+ * 그러면 모델마다 **다른 명세로 쓴 글**을 나란히 놓고 품질을 비교하게 된다.
+ * 실제로 그렇게 잘못 비교했다 — Opus는 동료·독립, Sonnet은 학습·내면이었다.
+ */
+function fixedChoice(session: ReturnType<typeof createReadingSession>) {
+  return [...session.choices].sort((a, b) => a.axis.localeCompare(b.axis))[0];
+}
+
 function costOf(u: Usage) {
   return usd(u.input_tokens ?? 0, PRICE.input)
     + usd(u.output_tokens ?? 0, PRICE.output)
@@ -124,16 +136,17 @@ async function countInputs(): Promise<Counted[]> {
 
   for (const sample of SAMPLES) {
     const session = createReadingSession(sample.input);
-    const choice = session.choices[0];
+    const choice = fixedChoice(session);
 
     // count_tokens 는 생성 파라미터를 받지 않는다. 토큰 수에 영향을 주는
     // system/messages 만 넘긴다.
     const classify = buildClassifyRequest(sample.input);
     const render = buildRenderRequest(sample.input, choice.narrativeSpec, session.fork);
 
+    // 모델은 요청이 정한 것을 그대로 쓴다. 층마다 다르므로 상수를 쓰면 어긋난다.
     const [l2, l5] = await Promise.all([
-      client.beta.messages.countTokens({ model: MODEL, system: classify.system, messages: classify.messages }),
-      client.beta.messages.countTokens({ model: MODEL, system: render.system, messages: render.messages }),
+      client.beta.messages.countTokens({ model: classify.model, system: classify.system, messages: classify.messages }),
+      client.beta.messages.countTokens({ model: render.model, system: render.system, messages: render.messages }),
     ]);
 
     rows.push({ label: sample.label, l2Input: l2.input_tokens, l5Input: l5.input_tokens });
@@ -147,7 +160,7 @@ async function measureLive() {
 
   for (const sample of SAMPLES) {
     const session = createReadingSession(sample.input);
-    const choice = session.choices[0];
+    const choice = fixedChoice(session);
 
     const started = Date.now();
     const l2 = await client.beta.messages.create(buildClassifyRequest(sample.input));
@@ -190,7 +203,7 @@ async function sweepEffort() {
   const client = getAnthropic();
   const sample = SAMPLES[1]; // 보통 서술 — 실사용 분포의 중앙에 가깝다
   const session = createReadingSession(sample.input);
-  const choice = session.choices[0];
+  const choice = fixedChoice(session);
   const base = buildRenderRequest(sample.input, choice.narrativeSpec, session.fork);
 
   console.log(`\n=== effort 스윕 (L5) — "${sample.label}" 고정, 실제로 과금됩니다 ===\n`);
@@ -267,6 +280,9 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
   // 산문은 **항상 같은 샘플**을 찍는다. "첫 번째 통과분"을 찍으면 모델마다
   // 다른 입력이 나와 품질 비교가 성립하지 않는다 — 실제로 그렇게 잘못 비교했다.
   const PROSE_SAMPLE = 1; // 보통 서술
+  // 충실성은 한 번 돌려선 모른다 — 실제로 Haiku가 2/3과 1/3을 오갔다.
+  const repeatArg = process.argv.find((item) => item.startsWith("--repeat="));
+  const repeat = Math.max(1, Number(repeatArg?.split("=")[1] ?? "1") || 1);
 
   for (const model of models) {
     let okCount = 0;
@@ -275,12 +291,16 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
     let elapsedSum = 0;
     const failures: string[] = [];
     let sampleProse = "";
+    let sampleFull = "";
     let sampleOk = false;
+    let attempts = 0;
     let error: string | null = null;
 
-    for (const [index, sample] of SAMPLES.entries()) {
+    const plan = Array.from({ length: repeat }, () => SAMPLES.entries()).flatMap((entries) => [...entries]);
+    for (const [index, sample] of plan) {
+      attempts += 1;
       const session = createReadingSession(sample.input);
-      const choice = session.choices[0];
+      const choice = fixedChoice(session);
       const started = Date.now();
 
       try {
@@ -316,7 +336,12 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
           if (index === PROSE_SAMPLE) sampleProse = "(스키마 위반으로 산문 없음)";
           continue;
         }
-        if (index === PROSE_SAMPLE) sampleProse = prose.overview1.text;
+        if (index === PROSE_SAMPLE) {
+          sampleProse = prose.overview1.text;
+          // 개요1 한 문단으로는 못 정한다. 여섯 문단을 다 보여 준다.
+          sampleFull = (["overview1", "overview2", "timeline1", "timeline2", "timeline3", "commonFate"] as const)
+            .map((key) => `    [${key}] ${prose[key].text}`).join("\n");
+        }
 
         // 운영과 **같은 관문**을 통과시킨다. 여기서 떨어지면 실제로도 폴백한다.
         const merged = merge(choice.result, prose, choice.narrativeSpec);
@@ -345,12 +370,17 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
 
     console.log(`${model}`);
     console.log(
-      `  충실성 ${okCount}/${SAMPLES.length}  입력 ${tokenSum.input}tok  출력 ${tokenSum.output}tok`
-      + `  평균 ${(elapsedSum / SAMPLES.length / 1000).toFixed(1)}s  (${fmt(costSum)} — 아래 주의)`,
+      `  충실성 ${okCount}/${attempts}  입력 ${tokenSum.input}tok  출력 ${tokenSum.output}tok`
+      + `  평균 ${(elapsedSum / attempts / 1000).toFixed(1)}s  (${fmt(costSum)} — 아래 주의)`,
     );
     if (failures.length) console.log(`  실패 사유: ${[...new Set(failures)].join(" · ")}`);
-    if (sampleProse) {
-      console.log(`  ${layer === "l5" ? `개요1[${SAMPLES[PROSE_SAMPLE].label}, ${sampleOk ? "통과" : "탈락"}]` : "분류"}: ${sampleProse}`);
+    if (layer === "l2") {
+      if (sampleProse) console.log(`  분류: ${sampleProse}`);
+    } else if (process.argv.includes("--full") && sampleFull) {
+      console.log(`  전문[${SAMPLES[PROSE_SAMPLE].label}, ${sampleOk ? "통과" : "탈락"}]`);
+      console.log(sampleFull);
+    } else if (sampleProse) {
+      console.log(`  개요1[${SAMPLES[PROSE_SAMPLE].label}, ${sampleOk ? "통과" : "탈락"}]: ${sampleProse}`);
     }
     console.log();
   }
@@ -387,7 +417,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`모델 ${MODEL}\n`);
+  console.log(`모델 — L2 ${modelFor("l2")} · L5 ${modelFor("l5")}\n`);
   console.log("=== 입력 토큰 (count_tokens — 과금 없음) ===\n");
 
   const rows = await countInputs();
@@ -408,8 +438,10 @@ async function main() {
   } else if (process.argv.includes("--sweep")) {
     await sweepEffort();
   } else if (process.argv.includes("--models")) {
-    await compareModels("l5", CANDIDATES);
-    await compareModels("l2", CANDIDATES);
+    // --layer=l5 로 한 층만 잴 수 있다. 표본을 늘리면 두 층을 다 도는 게 오래 걸린다.
+    const layerArg = process.argv.find((item) => item.startsWith("--layer="))?.split("=")[1];
+    if (layerArg !== "l2") await compareModels("l5", CANDIDATES);
+    if (layerArg !== "l5") await compareModels("l2", CANDIDATES);
   } else {
     console.log("\n출력 토큰은 생성해 봐야 압니다. thinking 토큰이 출력에 합산 과금되므로");
     console.log("추정하지 않습니다. 실측하려면 --live 를 붙이십시오(과금됨).");
