@@ -1,4 +1,21 @@
 {
-  "indexes": [],
-  "fieldOverrides": []
+  "indexes": [
+    {
+      "//": "저장한 이야기 목록 — listSavedReadings(uid). 등호 둘 + 정렬 하나라 복합 인덱스가 필요하다. 없으면 조회가 FAILED_PRECONDITION 으로 죽는다.",
+      "collectionGroup": "readingSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "saved", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "//fieldOverrides": "TTL 정책. 여기 없으면 firebase deploy --force 가 콘솔에 있는 정책을 지운다 — 기록이 영원히 안 지워지게 된다. 반드시 선언해 둘 것.",
+  "fieldOverrides": [
+    { "collectionGroup": "readingSessions", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "readingFeedback", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "rateLimits", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "forkUnknowns", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
+  ]
 }

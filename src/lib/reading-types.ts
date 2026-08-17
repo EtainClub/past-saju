@@ -116,6 +116,17 @@ export type ReadingSession = {
   id: string;
   input: ReadingInput;
   createdAt: number;
+  /**
+   * 세션을 만든 사용자. 익명 로그인 uid 이며, 구글 연동 후에도 **그대로 유지**된다
+   * (linkWithPopup 은 uid 를 바꾸지 않는다). 통계와 재열람 목록의 열쇠다.
+   * 토큰이 없거나 검증 실패면 undefined — 인증은 이용 조건이 아니다.
+   */
+  uid?: string;
+  /**
+   * 사용자가 명시적으로 저장을 누른 세션. 보관기간이 7일 → 1년으로 늘어난다.
+   * **구글 연동만으로는 켜지지 않는다** — 보관 연장은 별도 의사표시다.
+   */
+  saved?: boolean;
   /** L2 판정 결과. L5 렌더러가 evidence를 쓰고, 미분류 검토에도 쓰인다. */
   fork: ForkResult;
   selectedSlot?: number;

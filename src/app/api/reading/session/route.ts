@@ -6,6 +6,7 @@ import type { BirthInput, ReadingInput } from "@/lib/reading-types";
 import { appCheckResponse, verifyAppCheck } from "@/lib/app-check";
 import { consumeRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { clientKey, readBoundedBody } from "@/lib/request-guard";
+import { identify } from "@/lib/auth";
 import { resolveFork } from "@/lib/fork/resolve";
 
 export const runtime = "nodejs";
@@ -59,7 +60,11 @@ export async function POST(request: Request) {
   const blocked = appCheckResponse(await verifyAppCheck(request), "reading/session");
   if (blocked) return blocked;
 
-  const verdict = await consumeRateLimit("session", clientKey(request));
+  // uid 가 있으면 그것으로, 없으면 IP 해시로 센다. 한국 이동통신 NAT 에서는
+  // 수천 명이 같은 IP 를 쓰므로 uid 쪽이 훨씬 정확하다 — 익명 로그인을
+  // 도입한 이유의 절반이 이것이다.
+  const requester = await identify(request);
+  const verdict = await consumeRateLimit("session", requester.uid ? `uid:${requester.uid}` : clientKey(request));
   if (!verdict.ok) return rateLimitResponse(verdict);
 
   const body = await readBoundedBody(request);
@@ -102,6 +107,9 @@ export async function POST(request: Request) {
   // 차단 대상 서술은 외부로 나가지 않는다.
   const fork = await resolveFork(input);
   const session = createReadingSession(input, fork);
+  // 누가 만든 세션인지 적어 둔다. 나중에 저장을 누를 때 본인 확인의 근거가 되고,
+  // 재열람 목록의 열쇠가 된다. 구글 연동을 해도 uid 는 바뀌지 않는다.
+  if (requester.uid) session.uid = requester.uid;
   try {
     await saveReadingSession(session);
   } catch (error) {

@@ -3,6 +3,14 @@ import { getFirebaseAdminFirestore } from "./firebase-admin";
 import type { ReadingResult, ReadingSession } from "./reading-types";
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * 저장을 선택한 사용자의 보관기간.
+ *
+ * 기본은 7일이고, **구글 연동 후 본인이 저장을 누른 경우에만** 1년으로
+ * 늘어난다. 연동만으로는 늘어나지 않는다 — 보관기간 연장은 별도 의사표시다.
+ * 개인정보처리방침에 두 기간을 모두 적어 두었다.
+ */
+const SAVED_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 const SESSIONS_COLLECTION = "readingSessions";
 const FEEDBACK_COLLECTION = "readingFeedback";
 const METRICS_COLLECTION = "internalMetrics";
@@ -46,12 +54,12 @@ function shouldUseFirestore() {
   return process.env.FIREBASE_STORAGE_BACKEND === "firestore";
 }
 
-function expiresAt(createdAt: number) {
-  return createdAt + SESSION_TTL_MS;
+function expiresAt(createdAt: number, saved = false) {
+  return createdAt + (saved ? SAVED_TTL_MS : SESSION_TTL_MS);
 }
 
 function isExpired(session: ReadingSession) {
-  return Date.now() >= expiresAt(session.createdAt);
+  return Date.now() >= expiresAt(session.createdAt, session.saved);
 }
 
 function pruneMemorySessions() {
@@ -67,7 +75,7 @@ function firestoreSessionData(session: ReadingSession) {
   const jsonSafeSession = JSON.parse(JSON.stringify(session)) as ReadingSession;
   return {
     ...jsonSafeSession,
-    expiresAt: Timestamp.fromMillis(expiresAt(session.createdAt)),
+    expiresAt: Timestamp.fromMillis(expiresAt(session.createdAt, session.saved)),
   };
 }
 
@@ -243,4 +251,93 @@ export async function saveReadingFeedback(sessionId: string, value: FeedbackValu
     );
     return "saved" as const;
   });
+}
+
+/* ── 보관과 재열람 ─────────────────────────────────────────────────────
+/**
+ * 보관과 재열람.
+ *
+ * 저장은 **사용자가 명시적으로 누른 경우에만** 일어난다. 구글 연동을 했다는
+ * 것만으로 보관기간이 늘어나지 않는다 — 연동은 "기기를 바꿔도 내 것"이고,
+ * 저장은 "이 이야기를 오래 두겠다"라서 의사표시가 다르다.
+ */
+
+export type SavedReading = {
+  id: string;
+  createdAt: number;
+  category: string;
+  eventDate: string;
+  /** 선택한 카드의 제목. 목록에서 어떤 이야기였는지 알아보게 한다. */
+  title: string | null;
+};
+
+export type SaveVerdict = "saved" | "missing" | "forbidden";
+
+/**
+ * 세션을 장기 보관으로 표시한다.
+ *
+ * **본인 확인이 핵심이다.** 세션 id 만 알면 남의 기록을 보관 처리할 수 있으면
+ * 안 되므로, 세션에 적힌 uid 와 요청자의 uid 가 같을 때만 허용한다.
+ */
+export async function markSessionSaved(sessionId: string, uid: string): Promise<SaveVerdict> {
+  if (!shouldUseFirestore()) {
+    const session = memorySessions.get(sessionId);
+    if (!session || isExpired(session)) return "missing";
+    if (session.uid !== uid) return "forbidden";
+    session.saved = true;
+    return "saved";
+  }
+
+  const db = getFirebaseAdminFirestore();
+  const ref = db.collection(SESSIONS_COLLECTION).doc(sessionId);
+  return db.runTransaction<SaveVerdict>(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) return "missing";
+    const session = sessionFromFirestore(snapshot.data()!);
+    if (isExpired(session)) return "missing";
+    if (session.uid !== uid) return "forbidden";
+    transaction.update(ref, {
+      saved: true,
+      // TTL 필드를 함께 밀어야 실제 보관기간이 늘어난다. saved 만 세우면
+      // Firestore TTL 이 7일에 그대로 지운다.
+      expiresAt: Timestamp.fromMillis(expiresAt(session.createdAt, true)),
+    });
+    return "saved";
+  });
+}
+
+/**
+ * 저장한 이야기 목록. 본문은 싣지 않는다 — 목록에서 남의 눈에 띌 이유가 없고,
+ * 상세는 기존 재열람 경로로 본다.
+ */
+export async function listSavedReadings(uid: string, limit = 20): Promise<SavedReading[]> {
+  const summarize = (session: ReadingSession): SavedReading => ({
+    id: session.id,
+    createdAt: session.createdAt,
+    category: session.input.event.category,
+    eventDate: session.input.event.date,
+    title: session.selectedSlot === undefined ? null : session.choices[session.selectedSlot]?.title ?? null,
+  });
+
+  if (!shouldUseFirestore()) {
+    pruneMemorySessions();
+    return [...memorySessions.values()]
+      .filter((session) => session.uid === uid && session.saved)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, limit)
+      .map(summarize);
+  }
+
+  const snapshot = await getFirebaseAdminFirestore()
+    .collection(SESSIONS_COLLECTION)
+    .where("uid", "==", uid)
+    .where("saved", "==", true)
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+
+  return snapshot.docs
+    .map((doc) => sessionFromFirestore(doc.data()))
+    .filter((session) => !isExpired(session))
+    .map(summarize);
 }

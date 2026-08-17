@@ -1,6 +1,6 @@
 {
   "name": "ifsaju",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "engines": {
     "node": ">=22",
@@ -11,7 +11,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc scripts/engine-fixtures.ts scripts/store-fixtures.ts scripts/fork-fixtures.ts scripts/guard-fixtures.ts scripts/safety-fixtures.ts scripts/l2-fixtures.ts scripts/render-snapshot.ts scripts/l5-fixtures.ts scripts/chart-golden.ts scripts/chart-diagnose.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --lib ES2022,DOM --esModuleInterop --skipLibCheck && node .test-dist/scripts/engine-fixtures.js && node .test-dist/scripts/fork-fixtures.js && node .test-dist/scripts/guard-fixtures.js && node .test-dist/scripts/safety-fixtures.js && node .test-dist/scripts/l2-fixtures.js && node .test-dist/scripts/render-snapshot.js b030a630d994c123d1dd9a8adbbbdf5713aa201d91f1998d03aad12af1997ac2 && node .test-dist/scripts/l5-fixtures.js && node .test-dist/scripts/chart-golden.js && node .test-dist/scripts/store-fixtures.js",
+    "test": "tsc scripts/engine-fixtures.ts scripts/store-fixtures.ts scripts/fork-fixtures.ts scripts/guard-fixtures.ts scripts/safety-fixtures.ts scripts/auth-fixtures.ts scripts/l2-fixtures.ts scripts/render-snapshot.ts scripts/l5-fixtures.ts scripts/chart-golden.ts scripts/chart-diagnose.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --lib ES2022,DOM --esModuleInterop --skipLibCheck && node .test-dist/scripts/engine-fixtures.js && node .test-dist/scripts/fork-fixtures.js && node .test-dist/scripts/guard-fixtures.js && node .test-dist/scripts/safety-fixtures.js && node .test-dist/scripts/auth-fixtures.js && node .test-dist/scripts/l2-fixtures.js && node .test-dist/scripts/render-snapshot.js b030a630d994c123d1dd9a8adbbbdf5713aa201d91f1998d03aad12af1997ac2 && node .test-dist/scripts/l5-fixtures.js && node .test-dist/scripts/chart-golden.js && node .test-dist/scripts/store-fixtures.js",
     "test:firebase": "node --env-file=.env.local scripts/firebase-smoke.cjs",
     "//llm:cost": "⚠ 실제로 과금됩니다. --live 로 실호출, --sweep 으로 effort 비교",
     "llm:cost": "tsc scripts/llm-cost.ts --outDir .test-dist --module commonjs --moduleResolution node --target ES2020 --lib ES2022,DOM --esModuleInterop --skipLibCheck && node --env-file=.env.local .test-dist/scripts/llm-cost.js"

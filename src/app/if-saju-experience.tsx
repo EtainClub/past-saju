@@ -3,7 +3,7 @@
 import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
-import { appCheckHeaders, warmAppCheck } from "@/lib/firebase-client";
+import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, warmAppCheck, type AuthState } from "@/lib/firebase-client";
 
 type Stage = "landing" | "birth" | "event" | "cards" | "reading";
 type CardSlot = 0 | 1 | 2;
@@ -228,6 +228,39 @@ function SliderField({ label, hint, low, high, value, onChange }: { label: strin
 }
 
 /**
+ * 결과를 본 **뒤에** 나오는 보관 제안.
+ *
+ * 답변 앞에 로그인 벽을 세우지 않는 이유: 그 시점의 사용자는 이미 생년월일시와
+ * 최대 1,400자를 썼고 카드까지 골랐다. **매몰비용이 최대인 지점에서 벽을 만나면
+ * 이탈한다.** 게다가 "봉인된 카드를 연다"는 이 제품의 연출 자체가 무너진다.
+ *
+ * 여기서는 가치를 이미 경험했으므로 거절해도 잃는 게 없다.
+ */
+function SaveBox({ state, linked, onSave }: { state: "idle" | "working" | "saved" | "failed"; linked: boolean; onSave: () => void }) {
+  if (state === "saved") {
+    return (
+      <div className="save-box saved">
+        <strong>보관했어요.</strong>
+        <span>이 이야기는 1년 동안 다시 볼 수 있어요. 언제든 지울 수 있습니다.</span>
+      </div>
+    );
+  }
+  return (
+    <div className="save-box">
+      <strong>이 이야기를 계속 보관할까요?</strong>
+      <span>
+        지금은 <b>7일 뒤 자동으로 지워집니다.</b> 구글 계정으로 저장하면 1년 동안
+        다시 볼 수 있어요. 저장하지 않아도 결과는 그대로 보실 수 있습니다.
+      </span>
+      <button type="button" className="secondary-button" onClick={onSave} disabled={state === "working"}>
+        {state === "working" ? <><span className="spinner" /> 저장하는 중</> : linked ? "이 이야기 보관하기" : "구글 계정으로 저장하기"}
+      </button>
+      {state === "failed" && <small className="save-error">저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.</small>}
+    </div>
+  );
+}
+
+/**
  * 처음 쓰는 사람만 보는 예시.
  *
  * 익숙해지면 방해가 되므로 한 번 닫으면 다시 뜨지 않는다(localStorage).
@@ -263,6 +296,8 @@ export function IfSajuExperience() {
   // 서버 렌더와 첫 클라이언트 렌더가 어긋나면 안 되므로 false 로 시작하고,
   // localStorage 를 읽은 뒤에만 켠다.
   const [showExample, setShowExample] = useState(false);
+  const [auth, setAuth] = useState<AuthState>(null);
+  const [saveState, setSaveState] = useState<"idle" | "working" | "saved" | "failed">("idle");
   const [showOptional, setShowOptional] = useState(false);
   const [session, setSession] = useState<SessionEnvelope | null>(null);
   const [candidate, setCandidate] = useState<CardSlot | null>(null);
@@ -289,6 +324,12 @@ export function IfSajuExperience() {
 
   // App Check 토큰을 미리 받아 두면 첫 API 호출의 지연이 줄어든다.
   useEffect(() => { warmAppCheck(); }, []);
+
+  // 접속하면 조용히 익명 로그인한다. 화면에 아무 변화도 없다.
+  // 목적은 통계와 속도 제한 정확도이지 이용 제한이 아니다 — 실패해도 그냥 쓴다.
+  useEffect(() => {
+    void ensureAnonymousAuth().then(() => currentAuthState()).then(setAuth).catch(() => setAuth(null));
+  }, []);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -432,7 +473,7 @@ export function IfSajuExperience() {
     try {
       const response = await fetch("/api/reading/session", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await appCheckHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
         body: JSON.stringify(input),
       });
       const data = await response.json();
@@ -462,7 +503,7 @@ export function IfSajuExperience() {
     try {
       const response = await fetch("/api/reading/stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await appCheckHeaders()) },
+        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
         body: JSON.stringify({ sessionId: session.sessionId, slot }),
       });
       if (!response.ok || !response.body) {
@@ -522,7 +563,39 @@ export function IfSajuExperience() {
   async function sendFeedback(value: string) {
     if (!session || feedback) return;
     setFeedback(value);
-    await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json", ...(await appCheckHeaders()) }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
+    await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json", ...(await requestHeaders()) }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
+  }
+
+  /**
+   * 이 이야기를 오래 보관한다.
+   *
+   * 익명 상태면 먼저 구글 연동을 띄운다. **연동은 익명 uid 를 승격시키는 것**이라
+   * 방금 만든 이 세션이 그대로 내 것으로 남는다 — 새로 로그인하는 게 아니다.
+   */
+  async function saveReading() {
+    if (!session || saveState === "working" || saveState === "saved") return;
+    setSaveState("working");
+
+    if (!auth || auth.isAnonymous) {
+      const linked = await linkGoogleAccount();
+      if (!linked.ok) {
+        // 사용자가 팝업을 닫은 것은 실패가 아니다. 원래 자리로 돌려놓는다.
+        setSaveState(linked.reason === "cancelled" ? "idle" : "failed");
+        return;
+      }
+      setAuth(await currentAuthState());
+    }
+
+    try {
+      const response = await fetch("/api/reading/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
+        body: JSON.stringify({ sessionId: session.sessionId }),
+      });
+      setSaveState(response.ok ? "saved" : "failed");
+    } catch {
+      setSaveState("failed");
+    }
   }
 
   return (
@@ -712,7 +785,7 @@ export function IfSajuExperience() {
             {basis && <section className="basis-section fade-in"><details><summary><span><b>왜 이런 결과가 나왔나요?</b><small>계산에 사용된 사주 근거 보기</small></span><i>＋</i></summary><div className="basis-content"><ul><li><span>사주 원국</span><p><strong>{basis.pillars}</strong></p></li><li><span>일간</span><p><strong>{basis.dayMaster}</strong>, {basis.strength}</p></li><li><span>대운</span><p>{basis.daeun}</p></li><li><span>용신·기신</span><p>{basis.usefulFlow}</p></li><li><span>사건 흐름</span><p>{basis.eventFlow}</p></li>{basis.turningPointsUsed.map((point) => <li key={point.monthOffset}><span>{point.monthOffset}개월째</span><p>{point.label}이 전환점으로 계산되었어요.</p></li>)}<li><span>현실 조건</span><p>{basis.realityContext}</p></li><li><span>출생 시각</span><p>{basis.hourPillarNote}</p></li></ul><p className="engine-note">계산 규칙 {basis.engineVersion}</p></div></details></section>}
             {isStreaming && <div className="writing-status" aria-live="polite"><span className="writing-line" /><span>운명의 다음 문장을 기록하고 있어요</span></div>}
             {error && <div className="error-panel reading-error" role="alert"><strong>{error.message}</strong></div>}
-            {closing && <section className="closing-section fade-in"><p>{closing.closingLine}</p><span className="closing-symbol" aria-hidden="true"><i /><i /></span><div className="feedback-box"><h2>이 이야기는 어떻게 느껴졌나요?</h2><p>당신의 답은 사주가 이야기에 실제로 기여하는지 확인하는 데 쓰여요.</p><div>{[{ key: "plausible", label: "꽤 그럴듯해요" }, { key: "uncertain", label: "잘 모르겠어요" }, { key: "not-really", label: "별로 그렇지 않아요" }].map((item) => <button type="button" key={item.key} aria-pressed={feedback === item.key} className={feedback === item.key ? "selected" : ""} disabled={Boolean(feedback)} onClick={() => sendFeedback(item.key)}>{feedback === item.key ? "✓ " : ""}{item.label}</button>)}</div>{feedback && <span className="thanks">고마워요. 답을 안전하게 기록했어요.</span>}</div><p className="uncertainty">{closing.uncertaintyNote}</p><button className="secondary-button" type="button" onClick={resetEvent}>다른 갈림길 열어보기 <Arrow /></button></section>}
+            {closing && <section className="closing-section fade-in"><p>{closing.closingLine}</p><span className="closing-symbol" aria-hidden="true"><i /><i /></span><div className="feedback-box"><h2>이 이야기는 어떻게 느껴졌나요?</h2><p>당신의 답은 사주가 이야기에 실제로 기여하는지 확인하는 데 쓰여요.</p><div>{[{ key: "plausible", label: "꽤 그럴듯해요" }, { key: "uncertain", label: "잘 모르겠어요" }, { key: "not-really", label: "별로 그렇지 않아요" }].map((item) => <button type="button" key={item.key} aria-pressed={feedback === item.key} className={feedback === item.key ? "selected" : ""} disabled={Boolean(feedback)} onClick={() => sendFeedback(item.key)}>{feedback === item.key ? "✓ " : ""}{item.label}</button>)}</div>{feedback && <span className="thanks">고마워요. 답을 안전하게 기록했어요.</span>}</div><SaveBox state={saveState} linked={Boolean(auth && !auth.isAnonymous)} onSave={saveReading} /><p className="uncertainty">{closing.uncertaintyNote}</p><button className="secondary-button" type="button" onClick={resetEvent}>다른 갈림길 열어보기 <Arrow /></button></section>}
           </div>
         </main>
       )}

@@ -293,6 +293,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .example-line b { flex: 0 0 4.6rem; font-weight: 600; color: var(--faint); font-size: .6rem; padding-top: .1rem; }
 .example-foot { font-size: .6rem; color: var(--faint); margin: .6rem 0 0; line-height: 1.5; }
 .field-hint { display: block; font-size: .6rem; color: var(--faint); line-height: 1.5; margin: .1rem 0 .35rem; }
+
+/* 결과 뒤 보관 제안. 피드백 박스와 같은 무게로 두어 벽처럼 보이지 않게 한다. */
+.save-box { display: flex; flex-direction: column; gap: .55rem; margin: 1.4rem 0 0; padding: 1.15rem 1.2rem; border-radius: 1rem; background: rgba(234,229,220,.52); text-align: left; }
+.save-box strong { font-family: "Iowan Old Style", "AppleMyungjo", Georgia, serif; font-size: 1.02rem; font-weight: 600; letter-spacing: -.03em; }
+.save-box span { font-size: .68rem; color: var(--faint); line-height: 1.7; }
+.save-box b { color: var(--ink); font-weight: 600; }
+.save-box .secondary-button { align-self: flex-start; margin-top: .3rem; }
+.save-box.saved strong { color: var(--wine); }
+.save-error { font-size: .62rem; color: #94424b; }
 .event-footer { margin-top: 1.7rem; }
 .spinner { width: .85rem; height: .85rem; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; }
 .error-panel { padding: 1rem 1.1rem; border-radius: .8rem; background: #f3e6e4; color: #6e353b; margin: 1.2rem 0 0; display: grid; gap: .35rem; font-size: .75rem; }
@@ -567,6 +576,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .category-grid button[aria-pressed="true"], .feedback-box button:hover, .feedback-box button.selected { background: rgba(208,154,160,.13); color: #edbdc2; }
   .slider-group { background: rgba(255,255,255,.045); }
   .example-hint { background: rgba(255,255,255,.035); border-color: rgba(208,154,160,.28); }
+  .save-box { background: rgba(255,255,255,.045); }
+  .save-box.saved strong { color: #edbdc2; }
+  .save-box b { color: #efe9df; }
   .example-hint-head span { color: #edbdc2; }
   .example-line { color: #d5cec4; }
   .story-field small { background: #282623; }
