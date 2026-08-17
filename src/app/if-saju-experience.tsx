@@ -5,7 +5,7 @@ import Link from "next/link";
 import { apiUrl } from "@/lib/api-base";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
 import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, warmAppCheck, type AuthState } from "@/lib/firebase-client";
-import { IS_TOSS_APP } from "@/lib/platform";
+import { APP_VERSION, IS_TOSS_APP } from "@/lib/platform";
 
 type Stage = "landing" | "birth" | "event" | "cards" | "reading";
 type CardSlot = 0 | 1 | 2;
@@ -1291,6 +1291,11 @@ export function IfSajuExperience() {
           </div>
           <p className="legal-links"><Link href="/privacy">개인정보처리방침</Link> · <Link href="/terms">이용약관</Link></p>
           <p className="support-note">죽음·폭력·심각한 사고처럼 마음을 크게 다치게 한 사건은 자동 해석하지 않습니다. 위기 시 자살예방상담 109, 정신건강 위기상담 1577-0199에 연락하세요.</p>
+          {/*
+            맨 아래 작게. 읽으라고 두는 게 아니라, 문제를 알릴 때 어느 버전
+            이야기인지 짚을 수 있게 두는 값이다.
+          */}
+          {APP_VERSION && <p className="app-version">버전 {APP_VERSION}{IS_TOSS_APP ? " · 토스" : ""}</p>}
         </main>
       )}
 

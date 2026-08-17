@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { version } from "./package.json";
 
 /**
  * 앱인토스(Apps in Toss) 빌드는 **정적 내보내기**다.
@@ -23,6 +24,14 @@ const isTossBuild = process.env.TOSS_BUILD === "1";
 const PAGE_EXTENSIONS = ["tsx", "ts", "jsx", "js"];
 
 const nextConfig: NextConfig = {
+  /**
+   * 화면에 띄울 버전. **package.json 이 단일 출처다.**
+   *
+   * 화면에 쓰려고 상수를 따로 두면 올릴 때 한쪽만 고쳐 어긋난다. 그렇다고
+   * 클라이언트에서 package.json 을 통째로 import 하면 스크립트와 주석까지
+   * 번들에 실린다. 여기서 값 하나만 꺼내 넘긴다.
+   */
+  env: { NEXT_PUBLIC_APP_VERSION: version },
   pageExtensions: isTossBuild ? PAGE_EXTENSIONS : ["api.ts", ...PAGE_EXTENSIONS],
   ...(isTossBuild
     ? {

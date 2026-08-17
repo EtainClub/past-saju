@@ -518,6 +518,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .info-sheet dd { margin: 0; color: var(--muted); }
 .support-note { padding: 1rem; background: rgba(113,62,67,.07); color: #785258; border-radius: .7rem; font-size: .66rem; line-height: 1.65; }
 
+/* 더보기 맨 아래 버전. 눈에 띄면 안 되지만 물어봤을 때 읽을 수는 있어야 한다. */
+.app-version { margin: 1.25rem 0 0; text-align: center; font-size: .62rem; letter-spacing: .04em; color: var(--muted); opacity: .7; }
+
 .fade-in { animation: materialize 450ms ease both; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes materialize { from { opacity: 0; transform: translateY(.65rem); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }

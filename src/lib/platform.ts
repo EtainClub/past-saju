@@ -22,3 +22,12 @@
  * 그때 이 값을 쓰는 자리들을 되돌리면 된다.
  */
 export const IS_TOSS_APP = process.env.NEXT_PUBLIC_TOSS_APP === "1";
+
+/**
+ * 화면에 띄우는 앱 버전. `package.json` 의 값을 `next.config.ts` 가 넘겨준다.
+ *
+ * 사용자가 "어느 버전에서 그랬는지"를 말해 줄 수 있어야 한다. 특히 토스
+ * 번들은 서버와 따로 배포되므로, 웹과 앱이 서로 다른 버전으로 돌아가는
+ * 시기가 생긴다. 그때 화면의 이 숫자가 어느 쪽 이야기인지 가른다.
+ */
+export const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
