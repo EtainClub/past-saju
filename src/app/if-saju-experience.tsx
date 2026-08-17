@@ -530,9 +530,26 @@ function ExampleHint({ guide, onDismiss }: { guide: CategoryGuide; onDismiss: ()
   );
 }
 
-async function sha256(value: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+/**
+ * 봉인 해시. **없으면 null 을 돌려주고 끝낸다 — 던지지 않는다.**
+ *
+ * `crypto.subtle` 은 보안 컨텍스트에서만 있고, WebView 처럼 그 판정이
+ * 브라우저와 다른 환경이 있다. 봉인 확인은 "서버가 카드를 바꿔치기하지
+ * 않았다"를 **보여 주는** 부가 기능이다. 그걸 못 한다고 이야기 자체를
+ * 못 보게 만들면 손해가 더 크다.
+ *
+ * 확인하지 못하면 화면에 "확인하는 중"으로 남는다. 거짓으로 "일치한다"고
+ * 말하지는 않으므로 사용자를 속이지 않는다.
+ */
+async function sha256(value: string): Promise<string | null> {
+  if (typeof crypto === "undefined" || !crypto.subtle) return null;
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  } catch (error) {
+    console.error("봉인 해시 계산 실패", error);
+    return null;
+  }
 }
 
 export function IfSajuExperience() {
@@ -725,23 +742,37 @@ export function IfSajuExperience() {
     if (!event.date || event.story.trim().length < 10) return;
     setIsPreparing(true);
     setError(null);
+    // 어느 단계에서 넘어졌는지 남긴다. 예전에는 네 가지 실패가 전부
+    // "연결이 불안정해요" 한 줄로 뭉개져, 화면만 보고는 원인을 좁힐 수
+    // 없었다(토스 WebView 에서 실제로 그 벽에 부딪혔다).
+    let step: "AUTH" | "NET" | "PARSE" | "SEAL" = "AUTH";
     try {
+      const headers = { "Content-Type": "application/json", ...(await requestHeaders()) };
+
+      step = "NET";
       const response = await fetch(apiUrl("/api/reading/session"), {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
+        headers,
         body: JSON.stringify(input),
       });
+
+      step = "PARSE";
       const data = await response.json();
       if (!response.ok) {
         setError({ message: data.message ?? "봉인을 준비하지 못했어요.", support: data.support });
         return;
       }
+
+      // 여기서부터는 세션이 이미 만들어졌다. 남은 건 봉인 확인뿐이고,
+      // 그건 실패해도 이야기를 막지 않는다(sha256 이 null 을 돌려준다).
+      step = "SEAL";
       setSession(data);
       const recomputed = await sha256([...data.choiceCommitments].sort().join("|"));
-      setSealVerified(recomputed === data.sessionCommitment);
+      setSealVerified(recomputed !== null && recomputed === data.sessionCommitment);
       setStage("cards");
-    } catch {
-      setError({ message: "연결이 잠시 불안정해요. 입력은 그대로 두었으니 다시 시도해 주세요." });
+    } catch (error) {
+      console.error(`봉인 준비 실패 (${step})`, error);
+      setError({ message: `연결이 잠시 불안정해요. 입력은 그대로 두었으니 다시 시도해 주세요. (${step})` });
     } finally {
       setIsPreparing(false);
     }

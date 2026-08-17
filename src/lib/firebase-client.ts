@@ -165,12 +165,7 @@ export async function linkGoogleAccount(): Promise<{ ok: true; name: string | nu
   }
 }
 
-/**
- * API 호출용 헤더. App Check 토큰과 ID 토큰을 함께 싣는다.
- * 인증을 못 얻어도 요청은 보낸다 — 로그인은 통계·속도제한 수단이지
- * 서비스 이용 조건이 아니다.
- */
-export async function requestHeaders(): Promise<Record<string, string>> {
+async function collectAuthHeaders(): Promise<Record<string, string>> {
   const [appCheck, user] = await Promise.all([appCheckHeaders(), ensureAnonymousAuth()]);
   if (!user) return appCheck;
   try {
@@ -179,4 +174,32 @@ export async function requestHeaders(): Promise<Record<string, string>> {
     console.error("ID 토큰 발급 실패", error);
     return appCheck;
   }
+}
+
+/**
+ * 인증 헤더를 기다리는 상한.
+ *
+ * `ensureAnonymousAuth` 는 `onAuthStateChanged` 가 한 번 울리기를 기다린다.
+ * WebView 처럼 IndexedDB 나 저장소 접근이 막힌 환경에서는 그게 **영영 안 울릴
+ * 수 있다.** 그러면 예외도 안 나고 요청도 안 나가서 화면만 돈다 — 가장 고치기
+ * 어려운 종류의 고장이다.
+ */
+const AUTH_HEADER_TIMEOUT_MS = 4000;
+
+/**
+ * API 호출용 헤더. App Check 토큰과 ID 토큰을 함께 싣는다.
+ * 인증을 못 얻어도 요청은 보낸다 — 로그인은 통계·속도제한 수단이지
+ * 서비스 이용 조건이 아니다. 기다리다 못 얻는 것도 못 얻는 것으로 친다.
+ */
+export async function requestHeaders(): Promise<Record<string, string>> {
+  const timedOut = Symbol("timeout");
+  const headers = await Promise.race([
+    collectAuthHeaders(),
+    new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), AUTH_HEADER_TIMEOUT_MS)),
+  ]);
+  if (headers === timedOut) {
+    console.warn("인증 헤더 시간 초과 — 인증 없이 요청합니다");
+    return {};
+  }
+  return headers;
 }
