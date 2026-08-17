@@ -369,6 +369,65 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .luck-list span { font-size: .55rem; color: var(--faint); }
 .luck-list b { font-size: .78rem; font-weight: 600; }
 .luck-list em { font-style: normal; font-size: .5rem; color: var(--wine); }
+
+/* 축 브릿지 — 내 사주와 이야기가 같은 축에서 나왔음을 보여 주는 줄 */
+.axis-bridge { list-style: none; padding: 0; margin: .8rem 0 0; display: flex; flex-direction: column; gap: .4rem; }
+.axis-bridge li { display: grid; grid-template-columns: 1.1rem minmax(6.5rem, auto) 1fr auto; align-items: center; gap: .55rem; padding: .55rem .7rem; border-radius: .7rem; background: rgba(234,229,220,.42); }
+.axis-bridge li.in-story { background: rgba(122,29,47,.06); outline: 1px solid rgba(122,29,47,.18); }
+.axis-rank { font-family: Georgia, serif; font-size: .62rem; color: var(--faint); text-align: center; }
+.axis-name { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.axis-name b { font-size: .72rem; font-weight: 600; }
+.axis-name em { font-style: normal; font-size: .56rem; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.axis-track { height: .38rem; border-radius: .2rem; background: rgba(43,39,36,.08); overflow: hidden; }
+.axis-track i { display: block; height: 100%; border-radius: .2rem; background: var(--wine); opacity: .55; }
+.axis-bridge li.in-story .axis-track i { opacity: .9; }
+.axis-role { font-size: .55rem; font-weight: 600; padding: .12rem .4rem; border-radius: .3rem; white-space: nowrap; }
+.role-용신 { background: rgba(101,113,99,.2); color: #46503f; }
+.role-기신 { background: rgba(188,90,84,.16); color: #8a3b36; }
+.role-중립 { background: rgba(43,39,36,.07); color: var(--faint); }
+
+/* ── 오늘의 운세 ─────────────────────────────────────────────────────── */
+.fortune-hero { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1.1rem; padding: 1.15rem 1.2rem; margin: .3rem 0 .4rem; border-radius: 1rem; background: rgba(234,229,220,.5); }
+.fortune-dial {
+  --fill: 50%;
+  width: 5.4rem; height: 5.4rem; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto;
+  background: conic-gradient(var(--dial-ink, var(--wine)) calc(var(--fill)), rgba(43,39,36,.09) 0);
+}
+.fortune-dial > span { width: 4.1rem; height: 4.1rem; border-radius: 50%; background: var(--paper); display: grid; place-items: center; align-content: center; gap: .05rem; }
+.fortune-dial b { font-family: "Iowan Old Style", "AppleMyungjo", Georgia, serif; font-size: 1.5rem; font-weight: 600; letter-spacing: -.04em; line-height: 1; }
+.fortune-dial em { font-style: normal; font-size: .55rem; color: var(--faint); }
+.fortune-hero-copy { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.fortune-band { align-self: flex-start; font-size: .56rem; font-weight: 650; letter-spacing: .04em; padding: .14rem .45rem; border-radius: .3rem; background: rgba(43,39,36,.07); color: var(--muted); }
+.fortune-hero-copy strong { font-family: "Iowan Old Style", "AppleMyungjo", Georgia, serif; font-size: 1.05rem; font-weight: 600; letter-spacing: -.035em; }
+.fortune-hero-copy p { margin: 0; font-size: .68rem; color: var(--faint); line-height: 1.75; word-break: keep-all; }
+
+/* 밴드별 색. 좋을수록 진하게, 조심은 붉은 쪽으로 — 숫자만으로는 잘 안 읽힌다. */
+.tone-high { --dial-ink: var(--sage); }
+.tone-good { --dial-ink: var(--wine); }
+.tone-even { --dial-ink: rgba(113,62,67,.55); }
+.tone-care { --dial-ink: #b0625f; }
+.fortune-hero.tone-high .fortune-band { background: rgba(101,113,99,.2); color: #46503f; }
+.fortune-hero.tone-care .fortune-band { background: rgba(188,90,84,.16); color: #8a3b36; }
+
+.fortune-list { list-style: none; padding: 0; margin: .8rem 0 0; display: flex; flex-direction: column; gap: .55rem; }
+.fortune-list li { display: grid; grid-template-columns: 2.6rem auto 1fr auto; grid-template-areas: "domain stars track score" "head head head head" "detail detail detail detail"; align-items: center; gap: .3rem .55rem; padding: .85rem .95rem; border-radius: .85rem; background: rgba(234,229,220,.42); }
+.fortune-domain { grid-area: domain; font-size: .74rem; font-weight: 650; }
+.fortune-stars { grid-area: stars; font-size: .68rem; color: var(--dial-ink, var(--wine)); letter-spacing: .04em; }
+.fortune-stars i { font-style: normal; color: rgba(43,39,36,.16); }
+.fortune-track { grid-area: track; height: .34rem; border-radius: .2rem; background: rgba(43,39,36,.08); overflow: hidden; }
+.fortune-track i { display: block; height: 100%; border-radius: .2rem; background: var(--dial-ink, var(--wine)); opacity: .8; }
+.fortune-score { grid-area: score; font-size: .62rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+.fortune-headline { grid-area: head; font-size: .74rem; font-weight: 600; margin-top: .25rem; }
+.fortune-detail { grid-area: detail; margin: 0; font-size: .66rem; color: var(--faint); line-height: 1.75; word-break: keep-all; }
+
+.caution-list { list-style: none; padding: 0; margin: .8rem 0 0; display: flex; flex-direction: column; gap: .45rem; }
+.caution-list li { position: relative; padding: .8rem .95rem .8rem 1.9rem; border-radius: .8rem; background: rgba(188,90,84,.08); font-size: .68rem; line-height: 1.75; color: var(--ink); word-break: keep-all; }
+.caution-list li::before { content: "!"; position: absolute; left: .85rem; top: .78rem; width: .75rem; height: .75rem; border-radius: 50%; border: 1px solid rgba(138,59,54,.5); color: #8a3b36; font-size: .5rem; font-weight: 700; display: grid; place-items: center; }
+
+.fortune-basis { list-style: none; padding: 0; margin: .8rem 0 0; display: flex; flex-direction: column; gap: .35rem; }
+.fortune-basis li { display: grid; grid-template-columns: 5.2rem 1fr; gap: .6rem; align-items: baseline; font-size: .64rem; }
+.fortune-basis span { color: var(--faint); }
+.fortune-basis b { font-weight: 600; word-break: keep-all; }
 .event-footer { margin-top: 1.7rem; }
 .spinner { width: .85rem; height: .85rem; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; }
 .error-panel { padding: 1rem 1.1rem; border-radius: .8rem; background: #f3e6e4; color: #6e353b; margin: 1.2rem 0 0; display: grid; gap: .35rem; font-size: .75rem; }
@@ -721,6 +780,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .pillar-card.is-day { background: rgba(208,154,160,.1); border-color: rgba(208,154,160,.34); }
   .luck-list li.current { background: rgba(208,154,160,.12); outline-color: rgba(208,154,160,.36); }
   .luck-list em { color: #edbdc2; }
+  .axis-bridge li, .fortune-hero, .fortune-list li { background: rgba(255,255,255,.04); }
+  .axis-bridge li.in-story { background: rgba(208,154,160,.1); outline-color: rgba(208,154,160,.28); }
+  .axis-track, .fortune-track { background: rgba(255,255,255,.08); }
+  .role-용신 { background: rgba(168,183,165,.18); color: #b6c6b3; }
+  .role-기신 { background: rgba(214,124,118,.16); color: #dfa5a1; }
+  .role-중립 { background: rgba(255,255,255,.07); color: var(--faint); }
+  .fortune-dial { background: conic-gradient(var(--dial-ink, var(--wine)) calc(var(--fill)), rgba(255,255,255,.09) 0); }
+  .fortune-dial > span { background: var(--paper-deep); }
+  .fortune-band { background: rgba(255,255,255,.07); }
+  .fortune-hero.tone-high .fortune-band { background: rgba(168,183,165,.18); color: #b6c6b3; }
+  .fortune-hero.tone-care .fortune-band { background: rgba(214,124,118,.16); color: #dfa5a1; }
+  .tone-care { --dial-ink: #dfa5a1; }
+  .fortune-stars i { color: rgba(255,255,255,.16); }
+  .caution-list li { background: rgba(214,124,118,.1); }
+  .caution-list li::before { border-color: rgba(223,165,161,.5); color: #dfa5a1; }
   .element-track { background: rgba(255,255,255,.08); }
   .el-wood { background: rgba(140,178,140,.22); color: #a8c4a8; }
   .el-fire { background: rgba(214,124,118,.2); color: #dfa5a1; }

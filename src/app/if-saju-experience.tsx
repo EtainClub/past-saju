@@ -249,7 +249,7 @@ function SliderField({ label, hint, low, high, value, onChange }: { label: strin
   );
 }
 
-type Tab = "story" | "chart" | "archive" | "more";
+type Tab = "story" | "fortune" | "chart" | "archive" | "more";
 
 type ChartSummary = {
   pillars: Array<{ label: string; korean: string; hanja: string; stemElement: string; branchElement: string; stemTenGod: string | null; branchTenGod: string }>;
@@ -257,7 +257,38 @@ type ChartSummary = {
   elements: Array<{ element: string; count: number }>;
   strength: { score: number; band: string };
   axes: Array<{ axis: string; count: number }>;
+  bridge: {
+    axes: Array<{ axis: string; title: string; weight: number; role: "용신" | "기신" | "중립"; inStory: boolean }>;
+    luckAxis: string | null;
+    luckLabel: string | null;
+  };
   luck: { available: boolean; reason: string | null; startAge: number; forward: boolean; pillars: Array<{ age: number; korean: string; current: boolean }> };
+  timeUnknown: boolean;
+  profileId: string;
+};
+/** 서버(`lib/fortune/today.ts`)가 내는 하루치 운세. 화면은 받은 값만 그린다. */
+type FortuneScore = {
+  domain: string;
+  score: number;
+  stars: number;
+  band: string;
+  headline: string;
+  detail: string;
+};
+type TodayFortune = {
+  date: string;
+  weekday: string;
+  dayGanji: { korean: string; hanja: string };
+  dayMaster: { korean: string; element: string };
+  incoming: { stemTenGod: string; stemAxis: string; stemRole: string; branchTenGod: string; branchAxis: string; branchRole: string };
+  hits: Array<{ palace: string; meaning: string; branch: string; relation: string }>;
+  voidDay: boolean;
+  summary: string;
+  overall: FortuneScore;
+  domains: FortuneScore[];
+  cautions: string[];
+  support: { element: string; colors: string; direction: string; hours: string };
+  strength: { score: number; band: string };
   timeUnknown: boolean;
   profileId: string;
 };
@@ -271,6 +302,7 @@ type SavedItem = { id: string; createdAt: number; category: string; eventDate: s
  */
 const ALL_TABS: Array<{ key: Tab; label: string; glyph: string }> = [
   { key: "story", label: "이야기", glyph: "◇" },
+  { key: "fortune", label: "오늘", glyph: "☀" },
   { key: "chart", label: "내 사주", glyph: "☰" },
   { key: "archive", label: "보관함", glyph: "▤" },
   { key: "more", label: "더보기", glyph: "⋯" },
@@ -391,6 +423,42 @@ function ChartScreen({
             </span>
           </div>
 
+          {/*
+            축 브릿지 — 이 화면과 「이야기」가 하나의 명식에서 나왔음을 보여 준다.
+            여기 쓰는 가중치는 이야기 탭이 카드를 고를 때 쓰는 것과 **같은 계산**이다
+            (`lib/chart/axis-weight.ts`). 설명만 따로 쓰면 실제 이유와 어긋난다.
+          */}
+          {/* 앱(정적 번들)이 서버보다 먼저 나갈 수 있다. 브릿지가 없는 응답이면 이 구획만 조용히 빠진다. */}
+          {chart.bridge && (<>
+          <h2 className="chart-heading">이야기의 세 갈래는 어디서 나오나</h2>
+          <p className="tab-intro">
+            이야기 탭이 내미는 카드 세 장은 아래 다섯 축 중 <b>위쪽 세 개</b>에서 나옵니다.
+            원국에 지금 대운을 얹어 센 값이라, 대운이 바뀌면 순서도 바뀝니다.
+          </p>
+          <ul className="axis-bridge">
+            {chart.bridge.axes.map((item, index) => (
+              <li key={item.axis} className={item.inStory ? "in-story" : ""}>
+                <span className="axis-rank">{index + 1}</span>
+                <span className="axis-name">
+                  <b>{item.axis}</b>
+                  <em>{item.title}</em>
+                </span>
+                <span className="axis-track">
+                  <i style={{ width: `${Math.max(4, (item.weight / Math.max(...chart.bridge.axes.map((axis) => axis.weight))) * 100)}%` }} />
+                </span>
+                <span className={`axis-role role-${item.role}`}>{item.role}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="chart-note">
+            <b>용신</b>은 이 명식에 모자란 것을 채우는 축, <b>기신</b>은 이미 넘치는 쪽을 더 미는 축입니다.
+            좋고 나쁜 사람이 아니라 <b>기울기</b>를 말하는 분류예요.
+            {chart.bridge.luckAxis && (
+              <> 지금 대운 <b>{chart.bridge.luckLabel}</b>이 <b>{chart.bridge.luckAxis}</b> 축을 밀어 올리고 있습니다.</>
+            )}
+          </p>
+          </>)}
+
           <h2 className="chart-heading">대운</h2>
           {chart.luck.available ? (
             <>
@@ -412,7 +480,136 @@ function ChartScreen({
           )}
 
           <p className="chart-foot">
-            유파 {chart.profileId} · 자시설·균시차 미적용 기준으로 계산했어요. 이 화면은 길흉을 말하지 않습니다.
+            유파 {chart.profileId} · 자시설·균시차 미적용 기준으로 계산했어요. 이 화면은 계산된 것만 보여 줍니다 —
+            오늘 하루의 길흉은 「오늘의 운세」에서 봅니다.
+          </p>
+        </>
+      )}
+    </main>
+  );
+}
+
+const BAND_TONE: Record<string, string> = { "아주 좋음": "high", "좋음": "good", "무난": "even", "조심": "care" };
+
+function Stars({ count }: { count: number }) {
+  return (
+    <span className="fortune-stars" aria-label={`5점 만점에 ${count}점`}>
+      {"★".repeat(count)}<i>{"★".repeat(5 - count)}</i>
+    </span>
+  );
+}
+
+/**
+ * 오늘의 운세 — 내 사주와 **일부러 분리한 화면**.
+ *
+ * 「내 사주」는 계산만 보여 주고 길흉을 말하지 않는다는 원칙이 있다
+ * (docs/CHART-LLM-EXPANSION.md §4). 그 원칙을 지키면서 사람들이 실제로 찾는
+ * "오늘 어때요?"에 답하려면 자리를 나누는 수밖에 없다. 그래서 별도 탭이다.
+ *
+ * 점수·문장은 전부 서버의 결정론 계산에서 온다 — LLM 이 없다. 같은 날 다시
+ * 열어도 같은 말이 나오고, 하루에 몇 번을 열어도 비용이 늘지 않는다.
+ */
+function FortuneScreen({
+  fortune, error, hasBirth, onGoBirth, onRetry,
+}: {
+  fortune: TodayFortune | null;
+  error: string | null;
+  hasBirth: boolean;
+  onGoBirth: () => void;
+  onRetry: () => void;
+}) {
+  if (!hasBirth) {
+    return (
+      <main className="tab-page">
+        <p className="eyebrow"><span />오늘의 운세</p>
+        <h1>생년월일시를<br />먼저 알려주세요.</h1>
+        <p className="tab-intro">오늘의 운세는 <b>오늘의 일진</b>과 <b>내 명식</b>을 맞대어 봅니다. 명식이 없으면 오늘이 나에게 어떤 날인지 말할 수 없어요. 한 번 입력하면 이 기기에 저장돼 다시 묻지 않습니다.</p>
+        <button className="primary-button" type="button" onClick={onGoBirth}>생년월일 입력하기 <Arrow /></button>
+      </main>
+    );
+  }
+
+  const [year, month, day] = fortune ? fortune.date.split("-").map(Number) : [0, 0, 0];
+
+  return (
+    <main className="tab-page">
+      <p className="eyebrow"><span />오늘의 운세</p>
+      <h1>{fortune ? `${month}월 ${day}일 ${fortune.weekday}요일` : "오늘의 운세"}</h1>
+      {error && (
+        <div className="error-panel" role="alert">
+          <strong>{error}</strong>
+          <button className="secondary-button" type="button" onClick={onRetry}>다시 보기</button>
+        </div>
+      )}
+      {!error && !fortune && <p className="tab-intro">오늘의 흐름을 보는 중이에요…</p>}
+      {fortune && (
+        <>
+          <p className="tab-intro">
+            오늘은 <b>{fortune.dayGanji.korean}({fortune.dayGanji.hanja})</b>일입니다.
+            내 일간 <b>{fortune.dayMaster.korean}</b>에게 오늘 천간은 <b>{fortune.incoming.stemTenGod}</b>,
+            지지는 <b>{fortune.incoming.branchTenGod}</b>으로 들어와요.
+          </p>
+
+          <section className={`fortune-hero tone-${BAND_TONE[fortune.overall.band] ?? "even"}`}>
+            <div className="fortune-dial" style={{ "--fill": `${fortune.overall.score}%` } as CSSProperties}>
+              <span><b>{fortune.overall.score}</b><em>총운</em></span>
+            </div>
+            <div className="fortune-hero-copy">
+              <span className="fortune-band">{fortune.overall.band}</span>
+              <strong>{fortune.overall.headline}</strong>
+              <p>{fortune.overall.detail}</p>
+            </div>
+          </section>
+
+          <h2 className="chart-heading">애정 · 재물 · 성취</h2>
+          <ul className="fortune-list">
+            {fortune.domains.map((item) => (
+              <li key={item.domain} className={`tone-${BAND_TONE[item.band] ?? "even"}`}>
+                <span className="fortune-domain">{item.domain}</span>
+                <Stars count={item.stars} />
+                <span className="fortune-score">{item.score}</span>
+                <span className="fortune-track"><i style={{ width: `${item.score}%` }} /></span>
+                <strong className="fortune-headline">{item.headline}</strong>
+                <p className="fortune-detail">{item.detail}</p>
+              </li>
+            ))}
+          </ul>
+
+          <h2 className="chart-heading">오늘의 주의사항</h2>
+          <ul className="caution-list">
+            {fortune.cautions.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+
+          <h2 className="chart-heading">오늘 기대어 볼 것</h2>
+          <div className="more-card">
+            <strong>{fortune.support.element} 기운</strong>
+            <span>
+              색은 <b>{fortune.support.colors}</b>, 방향은 <b>{fortune.support.direction}</b>, 시간대는 <b>{fortune.support.hours}</b>입니다.
+              내 명식에 모자란 쪽(용신)을 채우는 오행이라 <b>날마다 바뀌지 않아요</b>.
+            </span>
+          </div>
+
+          <h2 className="chart-heading">이 결과의 근거</h2>
+          <ul className="fortune-basis">
+            <li><span>일진</span><b>{fortune.dayGanji.korean}</b></li>
+            <li><span>천간 십신</span><b>{fortune.incoming.stemTenGod} · {fortune.incoming.stemAxis} ({fortune.incoming.stemRole})</b></li>
+            <li><span>지지 십신</span><b>{fortune.incoming.branchTenGod} · {fortune.incoming.branchAxis} ({fortune.incoming.branchRole})</b></li>
+            <li>
+              <span>원국과의 관계</span>
+              <b>{fortune.hits.length ? fortune.hits.map((hit) => `${hit.palace}(${hit.branch}) ${hit.relation}`).join(" · ") : "충·합·형 없음"}</b>
+            </li>
+            <li><span>공망</span><b>{fortune.voidDay ? "오늘 지지가 공망" : "해당 없음"}</b></li>
+            <li><span>기운의 세기</span><b>{fortune.strength.band} · {fortune.strength.score}점</b></li>
+          </ul>
+          {fortune.timeUnknown && (
+            <p className="chart-note">태어난 시각을 몰라 <b>시주를 빼고</b> 봤어요. 시지와의 충·합은 계산에 넣지 않았습니다.</p>
+          )}
+
+          <p className="chart-foot">
+            {year}년 {month}월 {day}일(한국 시각) 기준 · 유파 {fortune.profileId} · 자정에 바뀝니다.
+            운세는 <b>참고</b>일 뿐이며, 의료·법률·투자 판단을 대신하지 않습니다.
           </p>
         </>
       )}
@@ -551,6 +748,14 @@ function ExampleHint({ guide, onDismiss }: { guide: CategoryGuide; onDismiss: ()
 }
 
 /**
+ * 한국 시각 기준 오늘(YYYY-MM-DD). 서버와 **같은 기준**으로 센다 —
+ * 기기 시간대로 세면 해외에서 열었을 때 매번 "다른 날"이 되어 계속 다시 부른다.
+ */
+function seoulDate() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+/**
  * 봉인 해시. **없으면 null 을 돌려주고 끝낸다 — 던지지 않는다.**
  *
  * `crypto.subtle` 은 보안 컨텍스트에서만 있고, WebView 처럼 그 판정이
@@ -588,6 +793,8 @@ export function IfSajuExperience() {
   const [savedError, setSavedError] = useState<string | null>(null);
   const [chartSummary, setChartSummary] = useState<ChartSummary | null>(null);
   const [chartError, setChartError] = useState<string | null>(null);
+  const [fortune, setFortune] = useState<TodayFortune | null>(null);
+  const [fortuneError, setFortuneError] = useState<string | null>(null);
   const [showOptional, setShowOptional] = useState(false);
   const [session, setSession] = useState<SessionEnvelope | null>(null);
   const [candidate, setCandidate] = useState<CardSlot | null>(null);
@@ -752,8 +959,9 @@ export function IfSajuExperience() {
     const normalizedBirth = { ...birth, city };
     setBirth(normalizedBirth);
     localStorage.setItem("ifsaju-birth", JSON.stringify(normalizedBirth));
-    // 출생 정보가 바뀌면 이전 명식은 남의 것이다. 다음에 「내 사주」를 열 때 다시 계산한다.
+    // 출생 정보가 바뀌면 이전 명식은 남의 것이다. 다음에 「내 사주」·「오늘」을 열 때 다시 계산한다.
     setChartSummary(null);
+    setFortune(null);
     setStage("event");
   }
 
@@ -935,10 +1143,34 @@ export function IfSajuExperience() {
     }
   }, []);
 
+  /**
+   * 오늘의 운세. 명식과 같은 성격의 순수 계산이라 LLM 도 저장소 쓰기도 없다.
+   *
+   * 날짜는 **서버가 KST 로 정한다.** 받아 둔 것이 오늘 것이 아니면(자정을 넘겨
+   * 열어 둔 화면) 다시 부른다 — 어제 운세를 오늘이라고 보여 주지 않는다.
+   */
+  const loadFortune = useCallback(async (target: BirthInput) => {
+    setFortuneError(null);
+    try {
+      const response = await fetch(apiUrl("/api/fortune"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
+        body: JSON.stringify({ birth: target }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message ?? "오늘의 운세를 보지 못했어요.");
+      setFortune(data.fortune as TodayFortune);
+    } catch (error) {
+      setFortuneError(error instanceof Error ? error.message : "오늘의 운세를 보지 못했어요.");
+    }
+  }, []);
+
   function selectTab(next: Tab) {
     setTab(next);
     if (next === "archive" && auth && !auth.isAnonymous && savedList === null) void loadArchive();
     if (next === "chart" && birth.date && chartSummary === null) void loadChart(birth);
+    // 자정을 넘겨 열어 둔 화면이면 어제 것이 남아 있다. 그때만 다시 부른다.
+    if (next === "fortune" && birth.date && fortune?.date !== seoulDate()) void loadFortune(birth);
   }
 
   /** 보관함에서 구글 연동만 먼저 하는 경로. */
@@ -1231,6 +1463,16 @@ export function IfSajuExperience() {
             <button className="secondary-button full-button" type="button" onClick={() => setShowInfo(false)}>확인했어요</button>
           </section>
         </div>
+      )}
+
+      {tab === "fortune" && (
+        <FortuneScreen
+          fortune={fortune}
+          error={fortuneError}
+          hasBirth={Boolean(birth.date)}
+          onGoBirth={() => { setTab("story"); setStage("birth"); }}
+          onRetry={() => loadFortune(birth)}
+        />
       )}
 
       {tab === "chart" && (

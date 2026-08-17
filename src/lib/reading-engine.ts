@@ -1,9 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   calculateFourPillars,
-  getBranchTenGod,
   getTenGod,
-  type EarthlyBranch,
   type FiveElement,
   type FourPillarsDetail,
   type Pillar,
@@ -19,7 +17,9 @@ import type {
   TurningPoint,
 } from "./reading-types";
 import { resolveSolarBirthDate } from "./birth-date";
-import { AXES, axisFromTenGod } from "./ten-god-axis";
+import { axisFromTenGod } from "./ten-god-axis";
+import { branchRelation, PRODUCER } from "./chart/branch-relation";
+import { weighAxes } from "./chart/axis-weight";
 import { classifyFork } from "./fork/classify";
 import { forkBias } from "./fork/bias";
 import type { AxisBias, ForkResult } from "./fork/types";
@@ -48,9 +48,6 @@ const CITY_LONGITUDE: Record<string, number> = {
   강릉: 128.8761,
   전주: 127.148,
 };
-const PRODUCER: Record<FiveElement, FiveElement> = { 목: "수", 화: "목", 토: "화", 금: "토", 수: "금" };
-const CLASH: Record<string, string> = { 자: "오", 오: "자", 축: "미", 미: "축", 인: "신", 신: "인", 묘: "유", 유: "묘", 진: "술", 술: "진", 사: "해", 해: "사" };
-const COMBINE: Record<string, string> = { 자: "축", 축: "자", 인: "해", 해: "인", 묘: "술", 술: "묘", 진: "유", 유: "진", 사: "신", 신: "사", 오: "미", 미: "오" };
 
 type EngineContext = {
   chart: FourPillarsDetail;
@@ -144,6 +141,9 @@ function calculateStrength(chart: FourPillarsDetail, timeUnknown: boolean) {
 /**
  * 십신 축 순위.
  *
+ * 가중치·용신·기신 판정은 `chart/axis-weight.ts` 가 단일 출처다 —
+ * 「내 사주」의 축 브릿지가 같은 값을 써야 두 화면이 어긋나지 않는다.
+ *
  * 갈림길 편향(bias)은 **카드 축 선택에만** 반영한다.
  * 용신·기신은 명식 판정이므로 갈림길이 바꾸면 안 된다 — L1/L2 경계.
  */
@@ -154,48 +154,17 @@ function rankedAxes(
   activeLuck: Pillar | null,
   bias: AxisBias,
 ) {
-  const scores = new Map<TenGodAxis, number>(AXES.map((axis) => [axis, 0]));
-  const gods: Array<{ god: TenGod; weight: number }> = [
-    { god: chart.tenGods.year.stem, weight: 1 }, { god: chart.tenGods.year.branch, weight: 1 },
-    { god: chart.tenGods.month.stem, weight: 1.45 }, { god: chart.tenGods.month.branch, weight: 1.45 },
-    { god: chart.tenGods.day.branch, weight: 1.15 },
-  ];
-  if (!timeUnknown) gods.push({ god: chart.tenGods.hour.stem, weight: .8 }, { god: chart.tenGods.hour.branch, weight: .8 });
-  if (activeLuck) {
-    gods.push(
-      { god: getTenGod(chart.day.heavenlyStem, activeLuck.heavenlyStem), weight: 1.8 },
-      { god: getBranchTenGod(chart.day.heavenlyStem, activeLuck.earthlyBranch), weight: 1.2 },
-    );
-  }
-  gods.forEach(({ god, weight }) => {
-    const axis = axisFromTenGod(god);
-    scores.set(axis, (scores.get(axis) ?? 0) + weight);
-  });
-  const useful = strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? ["식상", "재성", "관성"] : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? ["인성", "비겁"] : ["식상", "인성", "재성"];
-  useful.forEach((axis) => scores.set(axis as TenGodAxis, (scores.get(axis as TenGodAxis) ?? 0) + 1.2));
-  const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
-  const usefulPool: TenGodAxis[] = strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? ["식상", "재성", "관성"] : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? ["인성", "비겁"] : ranked.slice(0, 2).map(([axis]) => axis);
-  const hostilePool: TenGodAxis[] = strengthScore >= DEFAULT_PROFILE.strengthThresholds.strong ? ["비겁", "인성"] : strengthScore < DEFAULT_PROFILE.strengthThresholds.weak ? ["식상", "재성", "관성"] : ranked.slice(-2).map(([axis]) => axis);
-  const biased = new Map(scores);
+  const weights = weighAxes(chart, strengthScore, timeUnknown, activeLuck);
+  const biased = new Map(weights.scores);
   for (const [axis, delta] of Object.entries(bias) as Array<[TenGodAxis, number]>) {
     biased.set(axis, (biased.get(axis) ?? 0) + delta);
   }
   const cardRanked = [...biased.entries()].sort((a, b) => b[1] - a[1]);
   return {
     axes: cardRanked.slice(0, 3).map(([axis]) => axis),
-    usefulAxes: usefulPool.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)),
-    hostileAxes: hostilePool.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)),
+    usefulAxes: weights.usefulAxes,
+    hostileAxes: weights.hostileAxes,
   };
-}
-
-function branchRelation(source: EarthlyBranch, target: EarthlyBranch): "충" | "합" | "형" | null {
-  if (CLASH[source] === target) return "충";
-  if (COMBINE[source] === target) return "합";
-  if (source === target && ["진", "오", "유", "해"].includes(source)) return "형";
-  if ((source === "자" && target === "묘") || (source === "묘" && target === "자")) return "형";
-  const punishment = new Set([source, target]);
-  if ((punishment.has("인") && punishment.has("사")) || (punishment.has("사") && punishment.has("신")) || (punishment.has("축") && punishment.has("술")) || (punishment.has("술") && punishment.has("미"))) return "형";
-  return null;
 }
 
 function pillarForMonth(input: ReadingInput, offset: number) {

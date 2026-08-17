@@ -86,4 +86,32 @@ assert.deepEqual(summarizeChart(birth(), fixed), summarizeChart(birth(), fixed),
 const current = summarizeChart(birth(), fixed).luck.pillars.filter((p) => p.current);
 assert.equal(current.length <= 1, true, `'지금'이 ${current.length}개 표시됐다`);
 
-console.log("chart summary fixtures: 근거란일치·시간미상·일간십신·대운부재사유·신강일치·프로파일·결정론 passed");
+// ── 9. 축 브릿지가 이야기 탭과 같은 축을 가리키는가 ─────────────────────
+// 브릿지의 존재 이유는 "이야기 카드가 왜 이것인지"를 설명하는 것이다.
+// 설명이 실제 카드 선택과 다르면 브릿지는 없느니만 못하다.
+for (const b of [birth(), birth({ gender: "여성", city: "서울" }), birth({ date: "1975-11-08", time: "05:40" })]) {
+  const summary = summarizeChart(b, fixed);
+  assert.equal(summary.bridge.axes.length, 5, "다섯 축이 다 나와야 한다");
+  assert.equal(new Set(summary.bridge.axes.map((a) => a.axis)).size, 5, "축이 중복됐다");
+  // 점수 내림차순이어야 화면의 순위 표시가 거짓이 되지 않는다.
+  for (let index = 1; index < summary.bridge.axes.length; index += 1) {
+    assert.equal(summary.bridge.axes[index - 1].weight >= summary.bridge.axes[index].weight, true, "가중치 정렬이 깨졌다");
+  }
+  // 이야기에 쓰이는 것은 상위 세 축이다(갈림길 편향 제외).
+  const inStory = summary.bridge.axes.filter((a) => a.inStory);
+  assert.equal(inStory.length, 3, `이야기 축이 ${inStory.length}개다`);
+  assert.deepEqual(inStory.map((a) => a.axis), summary.bridge.axes.slice(0, 3).map((a) => a.axis), "상위 3축이 아닌 것이 이야기 축으로 표시됐다");
+
+  const session = createReadingSession(reading(b));
+  const basis = session.choices[0].result.basis.usefulFlow;
+  for (const axis of summary.bridge.axes.filter((a) => a.role === "용신")) {
+    assert.equal(basis.includes(axis.axis), true, `서사 근거란에 없는 용신 축: ${axis.axis} / ${basis}`);
+  }
+  // 카드 제목도 같은 이름을 써야 한다 — 두 화면이 같은 축을 다르게 부르면 안 된다.
+  for (const choice of session.choices) {
+    const match = summary.bridge.axes.find((a) => a.axis === choice.axis);
+    assert.equal(match !== undefined && match.title === choice.title, true, `카드 제목 불일치: ${choice.axis} ${choice.title} vs ${match?.title}`);
+  }
+}
+
+console.log("chart summary fixtures: 근거란일치·시간미상·일간십신·대운부재사유·신강일치·프로파일·결정론·축브릿지 passed");

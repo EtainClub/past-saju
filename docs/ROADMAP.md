@@ -38,6 +38,8 @@ M2(서사 품질)의 구현 설계와 실측 기록은 [WORLDMODEL.md](./WORLDMO
 | 비용 통제 | 일일 호출 상한(500) · 킬스위치 · 층별 토큰 계량. 세션당 $0.014 | `src/lib/llm/{budget,pricing}.ts`, WORLDMODEL §5.E |
 | 법적 문서 | `/privacy` · `/terms` 정적 라우트. 수탁자(Google·Anthropic) 명시 | `src/app/{privacy,terms}/page.tsx` |
 | 브랜드 | `ifsaju.com` 연결·HTTPS·OG 이미지·favicon | `src/app/{opengraph-image,twitter-image,icon.svg}` |
+| **축 브릿지** | 「내 사주」가 이야기 카드 세 갈래의 근거를 보여 줌. 가중치는 이야기 엔진과 **같은 모듈**을 씀 | `src/lib/chart/axis-weight.ts`, CHART-LLM-EXPANSION §7.1 |
+| **오늘의 운세** | 별도 탭. 총운·애정·재물·성취 + 주의사항. **결정론 — LLM 없음, 캐시 불필요** | `src/lib/fortune/today.ts`, CHART-LLM-EXPANSION §7.2 |
 
 ### 아직 비어 있는 것
 
@@ -294,6 +296,7 @@ M2까지 끝났고 배포됐습니다. **다음은 새 기능이 아니라 관�
 2. **결과 공유 카드**: 축·요약·마무리 문장만 담은 이미지. **사건 서술은 절대 미포함.** 공유 여부는 명시적 옵트인
 3. **결과 재열람**: 현재 localStorage 7일 캐시뿐이라 기기가 바뀌면 소실. 서명된 재열람 링크(짧은 토큰, Firestore TTL과 동일한 7일) 제공
 4. **피드백 루프**: `readingFeedback` 컬렉션에 이미 쌓이고 있습니다. 축별·사건 카테고리별 긍정률을 집계해 M2의 문안 개선에 환류
+5. **오늘의 운세** — 선행 구현됨(2026-08-17). 매일 바뀌는 화면이라 재방문 유인 후보이고, LLM 이 없어 M6 게이트와 무관하게 나갔습니다. 재방문율 측정 시 이 탭의 진입을 별도로 셀 것
 
 ---
 
