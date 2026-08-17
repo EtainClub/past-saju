@@ -1,5 +1,119 @@
 # Firebase App Hosting runtime configuration.
-# Backend: ifsaju (project: pastsaju, region: asia-east1)
+# Backend: past-saju (project: pastsaju, region: asia-east1)
 # The backend association itself is managed by Firebase, not by this file.
+#
+# 값이 없으면 코드가 **조용히 안전한 쪽으로** 떨어진다:
+#   ANTHROPIC_API_KEY 없음  → LLM 전부 비활성, 패턴 + 템플릿만
+#   LLM_RENDER_ENABLED≠true → 템플릿 렌더링
+#   APP_CHECK_MODE 미지정   → 운영에서 monitor (검증하되 차단 안 함)
+# 설정이 빠져도 장애가 아니라 **기능 미동작**으로 나타난다. 배포 후
+# internalMetrics 로 실제 경로가 도는지 확인할 것.
+
 runConfig:
   minInstances: 0
+
+env:
+  # ── 저장소 ──────────────────────────────────────────────────────────
+  # 운영은 Firestore 를 강제한다. 연결 실패 시 메모리로 조용히 대체하지 않고
+  # 503 을 낸다 — 세션이 사라지는 것보다 안 열리는 게 낫다.
+  - variable: FIREBASE_STORAGE_BACKEND
+    value: firestore
+    availability: [RUNTIME]
+
+  # ── 남용 방지 ───────────────────────────────────────────────────────
+  # monitor: 토큰을 검증하되 없거나 틀려도 통과시키고 로그만 남긴다.
+  # 클라이언트 사이트 키가 아직 없어 토큰이 안 오므로, enforce 로 올리면
+  # 정상 사용자가 전부 401 을 받는다. 로그가 깨끗해진 뒤에 올릴 것.
+  - variable: APP_CHECK_MODE
+    value: monitor
+    availability: [RUNTIME]
+
+  # X-Forwarded-For 에서 뒤에서 몇 번째를 클라이언트로 볼지.
+  # ⚠ App Hosting 은 Google LB 뒤에 있어 홉 수가 로컬과 다를 수 있다.
+  # 값이 어긋나면 **모든 요청이 한 키로 묶여 과차단**된다. 배포 직후 429
+  # 발생률을 반드시 확인할 것 — README 남용 방지 절 참조.
+  - variable: RATE_LIMIT_XFF_DEPTH
+    value: "1"
+    availability: [RUNTIME]
+
+  # ── LLM ────────────────────────────────────────────────────────────
+  # 킬스위치. 사고 시 이 값만 false 로 바꿔 재배포하면 전 경로가 템플릿으로
+  # 돌아간다. 코드 변경 없이 멈출 수 있어야 한다.
+  - variable: LLM_ENABLED
+    value: "true"
+    availability: [RUNTIME]
+
+  # 일일 호출 상한. 세션당 약 $0.014 이므로 500 호출이면 하루 최대 $10 안팎
+  # (docs/WORLDMODEL.md §5.E). 예산을 세지 못하면 호출하지 않는다(fail-closed).
+  - variable: LLM_DAILY_CALL_BUDGET
+    value: "500"
+    availability: [RUNTIME]
+
+  # 층별 모델. 실측 근거는 §5.D.
+  #   L2 = 분류. 스키마·발췌 검증이 코드에 있어 헐거운 모델도 틀린 채로 못 지난다
+  #   L5 = 서사. Opus 와 충실성 같고 33% 빠르다
+  - variable: LLM_MODEL_L2
+    value: claude-haiku-4-5-20251001
+    availability: [RUNTIME]
+  - variable: LLM_MODEL_L5
+    value: claude-sonnet-5
+    availability: [RUNTIME]
+
+  # L5 LLM 렌더링 활성. 끄면 결정론 템플릿만 나간다.
+  - variable: LLM_RENDER_ENABLED
+    value: "true"
+    availability: [RUNTIME]
+
+  # 점진 노출 비율. 세션 id 해시 기준이라 **같은 세션은 항상 같은 경로**를 탄다
+  # (재열람 시 카드 내용이 바뀌면 안 된다).
+  #
+  # 0.25 로 시작한다. 비용은 위 상한이 막아 주지만, **반사실 방향 반전을 잡는
+  # 결정론 검사가 아직 없다**(§6-11). 실사용자에게 처음 나가는 것이므로
+  # 폴백률과 피드백을 보고 올린다.
+  - variable: LLM_RENDER_SAMPLE
+    value: "0.25"
+    availability: [RUNTIME]
+
+  # ── 클라이언트 Firebase (브라우저 번들에 포함됨) ──────────────────────
+  # NEXT_PUBLIC_* 는 빌드 시점에 번들에 박히므로 BUILD 가용성이 필요하다.
+  # RUNTIME 만 주면 빌드된 번들에 값이 없어 조용히 비활성화된다.
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: pastsaju
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: pastsaju.firebaseapp.com
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: pastsaju.firebasestorage.app
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "795988948217"
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: G-2CWL51SRVY
+    availability: [BUILD, RUNTIME]
+
+  # ── 비밀값 (Secret Manager) ─────────────────────────────────────────
+  # 이 파일에 값을 적지 않는다. 다음으로 등록한다:
+  #   firebase apphosting:secrets:set <이름> --project pastsaju
+  #
+  # NEXT_PUBLIC_* 두 개는 브라우저에 노출되는 공개 값이지만, 저장소에
+  # 자격증명처럼 보이는 문자열을 남기지 않으려고 함께 Secret 으로 둔다.
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
+    availability: [BUILD, RUNTIME]
+
+  # 없으면 LLM 전 경로가 비활성화된다(오류가 아니라 템플릿 폴백).
+  - variable: ANTHROPIC_API_KEY
+    secret: ANTHROPIC_API_KEY
+    availability: [RUNTIME]
+
+# ── 아직 설정하지 않은 것 ─────────────────────────────────────────────
+# NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY (reCAPTCHA Enterprise 사이트 키)
+#   이 값이 없으면 클라이언트가 App Check 토큰을 발급하지 않는다.
+#   서버는 monitor 라 통과시키지만 **App Check 의 실효 방어는 0**이고,
+#   현재 방어는 IP 기준 속도 제한뿐이다. 콘솔에서 키를 발급한 뒤
+#   secret 으로 추가하고 APP_CHECK_MODE 를 enforce 로 올릴 것.
