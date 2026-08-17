@@ -47,3 +47,6 @@ next-env.d.ts
 # Apps in Toss 빌드 산출물 (out/ 는 위에서 이미 무시된다)
 *.ait
 /.granite/
+
+# 작업용 임시 산출물 (로고 후보 렌더 등) — 저장소에 남길 이유가 없다
+/scratch/
