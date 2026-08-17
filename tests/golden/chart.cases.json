@@ -689,10 +689,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "경자",
+      "month": "임오",
+      "day": "경진",
+      "hour": "신사"
     },
     "engineOutput": {
       "year": "경자",
@@ -715,10 +715,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "정유",
+      "month": "병오",
+      "day": "신묘",
+      "hour": "정유"
     },
     "engineOutput": {
       "year": "정유",
@@ -741,10 +741,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "갑오",
+      "month": "을해",
+      "day": "기축",
+      "hour": "을축"
     },
     "engineOutput": {
       "year": "갑오",
@@ -949,10 +949,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "기묘",
+      "month": "병자",
+      "day": "무오",
+      "hour": "임자"
     },
     "engineOutput": {
       "year": "기묘",
@@ -1079,10 +1079,10 @@
       "gender": "남성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "무신",
+      "month": "병진",
+      "day": "무신",
+      "hour": "기미"
     },
     "engineOutput": {
       "year": "무신",
@@ -1105,10 +1105,10 @@
       "gender": "여성"
     },
     "expected": {
-      "year": "",
-      "month": "",
-      "day": "",
-      "hour": ""
+      "year": "갑자",
+      "month": "정축",
+      "day": "병진",
+      "hour": "신묘"
     },
     "engineOutput": {
       "year": "갑자",
