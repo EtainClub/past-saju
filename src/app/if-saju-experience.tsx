@@ -923,7 +923,25 @@ export function IfSajuExperience() {
             <div className="progress-track"><i style={{ width: `${Math.min(step, 3) / 3 * 100}%` }} /></div>
           </div>
         )}
-        <button className="icon-button" type="button" onClick={openInfo} aria-label="서비스 안내"><span>?</span></button>
+        {/*
+          데스크톱 전용 탭. 하단 바는 모바일에서만 뜨므로, 이게 없으면
+          내 사주·보관함에 **아예 도달할 수 없다**(실제로 그렇게 나갔다).
+        */}
+        <div className="topbar-actions">
+          <nav className="top-nav" aria-label="주요 화면">
+            {TABS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                aria-current={tab === item.key ? "page" : undefined}
+                onClick={() => selectTab(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <button className="icon-button" type="button" onClick={openInfo} aria-label="서비스 안내"><span>?</span></button>
+        </div>
       </header>
 
       {tab === "story" && stage === "landing" && (
@@ -1104,7 +1122,14 @@ export function IfSajuExperience() {
         </main>
       )}
 
-      <footer className="footer"><span>© 2026 만약사주</span><button type="button" onClick={openInfo}>이용 안내</button><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용약관</Link><span>첫 번째 이야기 · 가지 않은 운</span></footer>
+      {/*
+        푸터는 **이야기 탭에만** 둔다. 탭 화면들은 이 아래에 렌더되므로,
+        가드가 없으면 푸터가 내 사주·보관함 위에 뜬다(실제로 그렇게 나갔다).
+        모바일에서는 CSS 로 숨긴다 — 같은 내용이 「더보기」 하단에 있다.
+      */}
+      {tab === "story" && (
+        <footer className="footer"><span>© 2026 만약사주</span><button type="button" onClick={openInfo}>이용 안내</button><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용약관</Link><span>첫 번째 이야기 · 가지 않은 운</span></footer>
+      )}
 
       {ageGate === "checking" && <div className="modal-layer age-layer age-checking" aria-label="연령 확인 준비 중"><span className="spinner" /></div>}
 

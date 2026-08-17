@@ -74,6 +74,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   z-index: 20;
 }
 
+/* 우측 묶음. 데스크톱 탭과 안내 버튼이 마지막 열을 나눠 쓴다. */
+.topbar-actions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: .9rem; }
+.top-nav { display: flex; align-items: center; gap: .15rem; }
+.top-nav button { min-height: 2.4rem; padding: .4rem .7rem; border: 0; border-radius: .55rem; background: transparent; color: var(--faint); font-size: .7rem; letter-spacing: -.02em; cursor: pointer; transition: color .18s ease, background .18s ease; }
+.top-nav button:hover { color: var(--ink); background: rgba(43,39,36,.05); }
+.top-nav button[aria-current="page"] { color: var(--wine); font-weight: 600; background: rgba(122,29,47,.07); }
+
 .brand { min-height: 2.75rem; border: 0; background: transparent; padding: .6rem 0; justify-self: start; display: inline-flex; align-items: center; gap: .7rem; font-size: .97rem; font-weight: 680; letter-spacing: -.035em; cursor: pointer; }
 .brand:active, .icon-button:active, .back-button:active, .text-button:active { opacity: .58; transform: scale(.98); }
 .brand-mark { width: 1.62rem; height: 1.62rem; border: 1px solid rgba(32,32,30,.56); border-radius: 50%; display: grid; place-items: center; position: relative; }
@@ -554,9 +561,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   /* 마지막 요소가 바에 가리지 않도록 여백을 준다. */
   .app-shell { padding-bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px)); }
 
+  /* 모바일에서는 하단 바가 그 역할을 한다. 상단에 또 두면 자리만 먹는다. */
+  .top-nav { display: none; }
+  /*
+    푸터도 숨긴다. 이 내용(© · 이용 안내 · 개인정보처리방침 · 이용약관)은
+    「더보기」 탭 하단에 있으므로 도달 가능하며, 여기 두면 좁은 화면에서
+    본문을 밀어낸다.
+  */
+  .footer { display: none; }
+
   .topbar { height: 4.5rem; padding: 0 1rem; grid-template-columns: 1fr auto; }
+  .topbar-actions { grid-column: 2; }
   .progress-wrap { position: absolute; left: 1rem; right: 1rem; bottom: -.15rem; width: auto; grid-template-columns: auto 1fr; }
-  .icon-button { grid-column: 2; }
+  /* 이제 .topbar-actions 가 2열을 차지하므로 개별 지정이 필요 없다. */
   .landing { min-height: calc(100dvh - 8.75rem); padding: 3.5rem 1.2rem 2rem; display: flex; flex-direction: column; text-align: center; }
   .hero-copy { padding: 0; }
   .hero-copy .eyebrow { justify-content: center; }
@@ -660,6 +677,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .slider-group { background: rgba(255,255,255,.045); }
   .example-hint { background: rgba(255,255,255,.035); border-color: rgba(208,154,160,.28); }
   .save-box { background: rgba(255,255,255,.045); }
+  .top-nav button:hover { color: #efe9df; background: rgba(255,255,255,.06); }
+  .top-nav button[aria-current="page"] { color: #edbdc2; background: rgba(208,154,160,.12); }
   .bottom-nav { background: rgba(28,26,24,.94); border-top-color: rgba(255,255,255,.09); }
   .bottom-nav button[aria-current="page"] { color: #edbdc2; }
   .archive-list button { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.09); }
