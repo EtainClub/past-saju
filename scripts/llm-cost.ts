@@ -1,4 +1,5 @@
 import { getAnthropic, modelFor } from "../src/lib/llm/client";
+import { costOf, priceFor, type TokenUsage } from "../src/lib/llm/pricing";
 import { buildClassifyRequest } from "../src/lib/fork/classify-llm";
 import { buildRenderRequest, merge, parseProse } from "../src/lib/render/llm";
 import { checkFidelity } from "../src/lib/render/fidelity";
@@ -27,23 +28,8 @@ import type { ReadingInput } from "../src/lib/reading-types";
  * ⚠ --live 는 실제로 과금된다. 표본 수만큼 L2+L5가 호출된다.
  */
 
-/**
- * 단가(USD / 100만 토큰).
- *
- * ⚠ **이 값은 확인이 필요하다.** 코드가 알 수 없는 외부 사실이므로 환경변수로
- * 덮어쓸 수 있게 두었다. 요금 페이지의 값과 다르면 아래 출력의 "비용"은 전부
- * 틀린다 — 토큰 수는 실측이지만 금액은 이 표에 달려 있다.
- *
- * 캐시 쓰기는 기본 입력보다 비싸고(1.25배), 캐시 읽기는 훨씬 싸다(0.1배).
- * 정확한 배수도 요금 페이지에서 확인할 것.
- */
-const PRICE = {
-  input: Number(process.env.PRICE_INPUT_PER_MTOK ?? "15"),
-  output: Number(process.env.PRICE_OUTPUT_PER_MTOK ?? "75"),
-  cacheWrite: Number(process.env.PRICE_CACHE_WRITE_PER_MTOK ?? "18.75"),
-  cacheRead: Number(process.env.PRICE_CACHE_READ_PER_MTOK ?? "1.5"),
-};
-const PRICE_CONFIRMED = process.env.PRICE_CONFIRMED === "true";
+// 단가는 src/lib/llm/pricing.ts 가 갖는다(2026-08-17 요금 페이지 확인분).
+// 모델마다 다르므로 스크립트가 한 벌만 들고 있으면 모델 비교가 성립하지 않는다.
 
 /** 길이가 다른 세 갈래. 서술 길이가 비용을 좌우하므로 짧은·보통·긴 것을 함께 본다. */
 const SAMPLES: Array<{ label: string; input: ReadingInput }> = [
@@ -88,20 +74,11 @@ const SAMPLES: Array<{ label: string; input: ReadingInput }> = [
 
 type Counted = { label: string; l2Input: number; l5Input: number };
 
-function usd(tokens: number, perMtok: number) {
-  return (tokens / 1_000_000) * perMtok;
+function fmt(amount: number | null) {
+  return amount === null ? "단가미상" : `$${amount.toFixed(5)}`;
 }
 
-function fmt(amount: number) {
-  return `$${amount.toFixed(5)}`;
-}
-
-type Usage = {
-  input_tokens?: number | null;
-  output_tokens?: number | null;
-  cache_creation_input_tokens?: number | null;
-  cache_read_input_tokens?: number | null;
-};
+type Usage = TokenUsage;
 
 /**
  * 비교용 카드 선택 — **결정론이어야 한다.**
@@ -115,20 +92,21 @@ function fixedChoice(session: ReturnType<typeof createReadingSession>) {
   return [...session.choices].sort((a, b) => a.axis.localeCompare(b.axis))[0];
 }
 
-function costOf(u: Usage) {
-  return usd(u.input_tokens ?? 0, PRICE.input)
-    + usd(u.output_tokens ?? 0, PRICE.output)
-    + usd(u.cache_creation_input_tokens ?? 0, PRICE.cacheWrite)
-    + usd(u.cache_read_input_tokens ?? 0, PRICE.cacheRead);
+/** 단가를 모르면 0이 아니라 null. 0은 "공짜"로 읽혀 더 나쁘다. */
+function money(model: string, usage: Usage) {
+  return costOf(model, usage);
 }
 
-/**
- * ⚠ 단가는 모델마다 다르다. PRICE 는 한 벌뿐이므로 **모델 비교의 금액은
- * 서로 비교할 수 없다.** 비교 가능한 것은 토큰 수와 지연이다.
- * 모델별 단가를 넣으려면 요금 페이지 확인이 먼저다.
- */
+/** 합계 누적. 하나라도 단가를 모르면 합계 전체가 미상이 된다. */
+function addMoney(sum: number | null, next: number | null) {
+  return sum === null || next === null ? null : sum + next;
+}
+
 const CANDIDATES = (process.env.LLM_COMPARE_MODELS ?? "claude-opus-5,claude-sonnet-5,claude-haiku-4-5-20251001")
   .split(",").map((item) => item.trim()).filter(Boolean);
+
+/** measureLive() 가 채운다. projectBudget() 이 추정 대신 실측으로 환산한다. */
+const sessionCosts: number[] = [];
 
 async function countInputs(): Promise<Counted[]> {
   const client = getAnthropic();
@@ -162,30 +140,30 @@ async function measureLive() {
     const session = createReadingSession(sample.input);
     const choice = fixedChoice(session);
 
+    const classifyRequest = buildClassifyRequest(sample.input);
+    const renderRequest = buildRenderRequest(sample.input, choice.narrativeSpec, session.fork);
+
     const started = Date.now();
-    const l2 = await client.beta.messages.create(buildClassifyRequest(sample.input));
+    const l2 = await client.beta.messages.create(classifyRequest);
     const l2Elapsed = Date.now() - started;
 
     const renderStarted = Date.now();
-    const stream = client.beta.messages.stream(buildRenderRequest(sample.input, choice.narrativeSpec, session.fork));
+    const stream = client.beta.messages.stream(renderRequest);
     const l5 = await stream.finalMessage();
     const l5Elapsed = Date.now() - renderStarted;
 
-    const cost = (u: typeof l2.usage) =>
-      usd(u.input_tokens ?? 0, PRICE.input)
-      + usd(u.output_tokens ?? 0, PRICE.output)
-      + usd(u.cache_creation_input_tokens ?? 0, PRICE.cacheWrite)
-      + usd(u.cache_read_input_tokens ?? 0, PRICE.cacheRead);
-
-    const line = (name: string, u: typeof l2.usage, ms: number) =>
+    // 단가는 층마다 다르다 — 요청이 쓴 모델로 계산해야 한다.
+    const line = (name: string, model: string, u: Usage, ms: number) =>
       `  ${name}  입력 ${String(u.input_tokens ?? 0).padStart(6)}  출력 ${String(u.output_tokens ?? 0).padStart(6)}`
       + `  캐시쓰기 ${String(u.cache_creation_input_tokens ?? 0).padStart(6)}  캐시읽기 ${String(u.cache_read_input_tokens ?? 0).padStart(6)}`
-      + `  ${fmt(cost(u))}  ${(ms / 1000).toFixed(1)}s`;
+      + `  ${fmt(money(model, u))}  ${(ms / 1000).toFixed(1)}s`;
 
-    console.log(sample.label);
-    console.log(line("L2", l2.usage, l2Elapsed));
-    console.log(line("L5", l5.usage, l5Elapsed));
-    console.log(`  세션 합계  ${fmt(cost(l2.usage) + cost(l5.usage))}  ${((l2Elapsed + l5Elapsed) / 1000).toFixed(1)}s\n`);
+    console.log(`${sample.label}`);
+    console.log(line("L2", classifyRequest.model, l2.usage, l2Elapsed));
+    console.log(line("L5", renderRequest.model, l5.usage, l5Elapsed));
+    const total = addMoney(money(classifyRequest.model, l2.usage), money(renderRequest.model, l5.usage));
+    console.log(`  세션 합계  ${fmt(total)}  ${((l2Elapsed + l5Elapsed) / 1000).toFixed(1)}s\n`);
+    if (total !== null) sessionCosts.push(total);
   }
 }
 
@@ -225,10 +203,7 @@ async function sweepEffort() {
     const message = await stream.finalMessage();
     const elapsed = Date.now() - started;
     const u = message.usage;
-    const cost = usd(u.input_tokens ?? 0, PRICE.input)
-      + usd(u.output_tokens ?? 0, PRICE.output)
-      + usd(u.cache_creation_input_tokens ?? 0, PRICE.cacheWrite)
-      + usd(u.cache_read_input_tokens ?? 0, PRICE.cacheRead);
+    const cost = money(base.model, u);
 
     const block = message.content.find((item) => item.type === "text");
     const text = block && block.type === "text" ? block.text : "";
@@ -246,7 +221,8 @@ async function sweepEffort() {
 
     // effort가 직접 좌우하는 건 출력이다. 입력·캐시는 effort와 무관하므로
     // 비교는 출력 비용으로 해야 왜곡이 없다.
-    const outputCost = usd(u.output_tokens ?? 0, PRICE.output);
+    const price = priceFor(base.model);
+    const outputCost = price ? ((u.output_tokens ?? 0) / 1_000_000) * price.output : null;
 
     console.log(
       `  ${effort.padEnd(7)}${String(u.output_tokens ?? 0).padStart(6)}`
@@ -286,7 +262,7 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
 
   for (const model of models) {
     let okCount = 0;
-    let costSum = 0;
+    let costSum: number | null = 0;
     const tokenSum = { input: 0, output: 0 };
     let elapsedSum = 0;
     const failures: string[] = [];
@@ -306,7 +282,7 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
       try {
         if (layer === "l2") {
           const response = await client.beta.messages.create(buildClassifyRequest(sample.input, model));
-          costSum += costOf(response.usage);
+          costSum = addMoney(costSum, money(model, response.usage));
           elapsedSum += Date.now() - started;
           // L2의 성패는 "분류가 나왔는가"다. 스키마 위반·저신뢰는 UNKNOWN이 된다.
           const block = response.content.find((item) => item.type === "text");
@@ -324,7 +300,7 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
           buildRenderRequest(sample.input, choice.narrativeSpec, session.fork, model),
         );
         const message = await stream.finalMessage();
-        costSum += costOf(message.usage);
+        costSum = addMoney(costSum, money(model, message.usage));
         tokenSum.input += message.usage.input_tokens ?? 0;
         tokenSum.output += message.usage.output_tokens ?? 0;
         elapsedSum += Date.now() - started;
@@ -371,7 +347,7 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
     console.log(`${model}`);
     console.log(
       `  충실성 ${okCount}/${attempts}  입력 ${tokenSum.input}tok  출력 ${tokenSum.output}tok`
-      + `  평균 ${(elapsedSum / attempts / 1000).toFixed(1)}s  (${fmt(costSum)} — 아래 주의)`,
+      + `  평균 ${(elapsedSum / attempts / 1000).toFixed(1)}s  ${fmt(costSum)}`,
     );
     if (failures.length) console.log(`  실패 사유: ${[...new Set(failures)].join(" · ")}`);
     if (layer === "l2") {
@@ -385,10 +361,8 @@ async function compareModels(layer: "l2" | "l5", models: string[]) {
     console.log();
   }
 
-  console.log("⚠ 금액은 모델 간 비교 불가입니다 — PRICE 표가 한 벌이라 전부 같은 단가로 계산됩니다.");
-  console.log("  비교 가능한 것은 **토큰 수와 지연**입니다. 금액은 모델별 단가를 넣어야 나옵니다.");
   if (layer === "l5") {
-    console.log("\n충실성은 하한만 봅니다. **문장이 좋은지는 위 개요1을 읽어야** 압니다.");
+    console.log("충실성은 하한만 봅니다. **문장이 좋은지는 위 개요1을 읽어야** 압니다.");
     console.log("서사가 이 서비스의 제품 가치 자체이므로, 싸다고 자동으로 이기지 않습니다.");
   }
 }
@@ -405,10 +379,33 @@ function projectBudget() {
   const budget = Number(process.env.LLM_DAILY_CALL_BUDGET ?? "500") || 500;
   console.log("\n=== 하루 상한 환산 (§7-8) ===\n");
   console.log(`  현재 상한: ${budget} 호출/일 (LLM_DAILY_CALL_BUDGET)`);
-  console.log("  세션 1건 = L5 1회 + (패턴 미히트 시) L2 1회");
-  console.log(`  → 상한에 닿는 세션 수는 패턴 히트율에 달려 있다: ${budget}건(전부 히트) ~ ${Math.floor(budget / 2)}건(전부 미스)`);
-  console.log("\n  위 실호출의 '세션 합계'에 이 세션 수를 곱하면 일 최대 지출이다.");
-  console.log("  재시도(최대 1회)와 폴백 실패분도 호출을 소비하므로 실제는 더 위다.");
+  console.log("  세션 1건 = L5 1회 + (패턴 미히트 시) L2 1회\n");
+
+  if (!sessionCosts.length) {
+    console.log("  실호출 표본이 없어 환산할 수 없습니다. --live 를 붙이십시오.");
+    return;
+  }
+
+  const avg = sessionCosts.reduce((sum, item) => sum + item, 0) / sessionCosts.length;
+  const worst = Math.max(...sessionCosts);
+
+  // 상한은 호출 수로 걸린다. 패턴이 다 잡으면 세션당 1호출이라 세션 수가 늘고,
+  // 다 놓치면 2호출이라 절반이 된다. 지출은 그 사이 어딘가다.
+  const rows: Array<[string, number, number]> = [
+    ["패턴 전부 미스 (세션당 L2+L5 2호출)", Math.floor(budget / 2), avg],
+    ["패턴 전부 히트 (세션당 L5 1호출)", budget, avg],
+    ["패턴 전부 히트 · 최악 표본", budget, worst],
+  ];
+  console.log("  시나리오                           세션/일     단가      일 최대");
+  const daily: number[] = [];
+  for (const [label, sessions, unit] of rows) {
+    daily.push(sessions * unit);
+    console.log(`  ${label.padEnd(33)}${String(sessions).padStart(6)}  ${fmt(unit)}  ${fmt(sessions * unit)}`);
+  }
+  console.log(`\n  일 지출 범위: ${fmt(Math.min(...daily))} ~ ${fmt(Math.max(...daily))}`);
+  console.log(`  월 환산(30일): ${fmt(Math.min(...daily) * 30)} ~ ${fmt(Math.max(...daily) * 30)}`);
+  console.log("\n  주의 — 첫 호출은 캐시 **쓰기**를 물어 비싸다. 정상 운영은 캐시 읽기라 위 값보다 낮다.");
+  console.log("  반대로 재시도(최대 1회)와 폴백 실패분은 호출을 더 소비한다.");
 }
 
 async function main() {
@@ -447,12 +444,12 @@ async function main() {
     console.log("추정하지 않습니다. 실측하려면 --live 를 붙이십시오(과금됨).");
   }
 
-  console.log("\n=== 단가표 (USD / 1M tok) ===");
-  console.log(`  입력 ${PRICE.input} · 출력 ${PRICE.output} · 캐시쓰기 ${PRICE.cacheWrite} · 캐시읽기 ${PRICE.cacheRead}`);
-  if (!PRICE_CONFIRMED) {
-    console.log("\n  ⚠ 이 단가는 **확인되지 않았습니다.** 위 금액은 전부 이 표에 달려 있습니다.");
-    console.log("    토큰 수는 실측이지만 금액은 아닙니다. 요금 페이지와 대조한 뒤");
-    console.log("    PRICE_CONFIRMED=true 와 PRICE_*_PER_MTOK 를 설정하십시오.");
+  console.log("\n=== 단가표 (USD / 1M tok, 2026-08-17 요금 페이지) ===");
+  for (const model of new Set([modelFor("l2"), modelFor("l5"), ...CANDIDATES])) {
+    const price = priceFor(model);
+    console.log(price
+      ? `  ${model.padEnd(28)} 입력 ${price.input} · 출력 ${price.output} · 캐시쓰기 ${price.cacheWrite} · 캐시읽기 ${price.cacheRead}`
+      : `  ${model.padEnd(28)} 단가 미상 — src/lib/llm/pricing.ts 에 추가할 것`);
   }
 }
 
