@@ -984,7 +984,9 @@ export function IfSajuExperience() {
   }
 
   return (
-    <div className={`app-shell stage-${stage}`}>
+    // 토스는 탭바를 쓸 경우 플로팅 형태를 요구한다(미니앱 브랜딩 가이드).
+    // 웹은 지금의 붙은 바를 그대로 둔다 — 요구가 온 곳만 바꾼다.
+    <div className={`app-shell stage-${stage}${IS_TOSS_APP ? " floating-tabbar" : ""}`}>
       <div className="ambient" aria-hidden="true"><span /><span /><span /></div>
       <header className="topbar">
         <Brand />
