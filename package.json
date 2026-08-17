@@ -2,9 +2,11 @@
   "name": "ifsaju",
   "version": "0.4.0",
   "private": true,
+  "//packageManager": "쓸 pnpm 버전은 여기가 단일 출처다. pnpm 은 이 필드를 보고 해당 버전을 스스로 받아 넘긴다(manage-package-manager-versions 기본 켜짐). 그래서 전역에 뭐가 깔려 있든 같은 버전으로 빌드된다. engines 는 그 아래 하한선일 뿐이니 정확한 버전을 두 곳에 적지 않는다.",
+  "packageManager": "pnpm@11.13.0",
   "engines": {
     "node": ">=22",
-    "pnpm": "11.13.0"
+    "pnpm": ">=11"
   },
   "scripts": {
     "dev": "next dev --webpack",
