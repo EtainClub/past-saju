@@ -2,6 +2,7 @@
 
 import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { apiUrl } from "@/lib/api-base";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
 import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, warmAppCheck, type AuthState } from "@/lib/firebase-client";
 
@@ -706,7 +707,7 @@ export function IfSajuExperience() {
     setIsPreparing(true);
     setError(null);
     try {
-      const response = await fetch("/api/reading/session", {
+      const response = await fetch(apiUrl("/api/reading/session"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
         body: JSON.stringify(input),
@@ -761,7 +762,7 @@ export function IfSajuExperience() {
     setIsStreaming(true);
     setError(null);
     try {
-      const response = await fetch("/api/reading/stream", {
+      const response = await fetch(apiUrl("/api/reading/stream"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
         body: JSON.stringify({ sessionId, slot }),
@@ -824,14 +825,14 @@ export function IfSajuExperience() {
   async function sendFeedback(value: string) {
     if (!session || feedback) return;
     setFeedback(value);
-    await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json", ...(await requestHeaders()) }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
+    await fetch(apiUrl("/api/feedback"), { method: "POST", headers: { "Content-Type": "application/json", ...(await requestHeaders()) }, body: JSON.stringify({ sessionId: session.sessionId, value }) });
   }
 
   /** 보관함 목록. 탭을 열 때와 저장 직후에 부른다. */
   const loadArchive = useCallback(async () => {
     setSavedError(null);
     try {
-      const response = await fetch("/api/reading/saved", { headers: await requestHeaders() });
+      const response = await fetch(apiUrl("/api/reading/saved"), { headers: await requestHeaders() });
       if (response.status === 401) { setSavedList(null); return; }
       if (!response.ok) throw new Error("목록을 불러오지 못했어요.");
       const data = (await response.json()) as { readings: SavedItem[] };
@@ -851,7 +852,7 @@ export function IfSajuExperience() {
   const loadChart = useCallback(async (target: BirthInput) => {
     setChartError(null);
     try {
-      const response = await fetch("/api/chart", {
+      const response = await fetch(apiUrl("/api/chart"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
         body: JSON.stringify({ birth: target }),
@@ -899,7 +900,7 @@ export function IfSajuExperience() {
     }
 
     try {
-      const response = await fetch("/api/reading/saved", {
+      const response = await fetch(apiUrl("/api/reading/saved"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
         body: JSON.stringify({ sessionId: session.sessionId }),

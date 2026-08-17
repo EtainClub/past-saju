@@ -43,3 +43,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Apps in Toss 빌드 산출물 (out/ 는 위에서 이미 무시된다)
+*.ait
+/.granite/

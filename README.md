@@ -160,6 +160,45 @@ curl --fail --head https://past-saju--pastsaju.asia-east1.hosted.app
 
 App Hosting 롤아웃은 Firestore 규칙·인덱스·TTL 정책을 대신 배포하지 않습니다. 해당 파일이나 정책을 변경했다면 위 Firebase 절의 `firebase deploy`와 `gcloud firestore fields ttls update` 명령도 별도로 실행합니다. 운영 런타임은 Application Default Credentials를 사용하므로 서비스 계정 키 파일이나 `.env.local`을 배포 커밋에 포함하지 않습니다.
 
+## 앱인토스(Apps in Toss) 빌드
+
+웹 배포(App Hosting)는 그대로 두고, **지정했을 때만** 토스 앱으로 빌드됩니다.
+
+```bash
+pnpm build:toss   # 정적 내보내기만 (out/)
+pnpm build:ait    # 위 + .ait 번들 생성
+pnpm deploy:ait   # 콘솔 업로드 (CLI 인증 필요)
+```
+
+### 구조 — 화면만 번들, API는 배포된 서버
+
+토스 앱은 정적 번들을 WebView로 엽니다. **서버가 없습니다.** 이 서비스의 API 라우트는 LLM 키와 Firestore 자격증명을 쓰므로 앱에 넣을 수 없고, 정적 내보내기에서도 지원되지 않습니다(Request를 읽는 Route Handler는 Next의 "Unsupported Features").
+
+그래서 토스 빌드는 **화면만 내보내고 API는 이미 배포된 `ifsaju.com`을 호출**합니다. 서버를 한 벌 더 두지 않습니다.
+
+| | 웹 (App Hosting) | 토스 앱 |
+| --- | --- | --- |
+| 화면 | 서버 렌더 | 정적 번들 |
+| API | 같은 출처 `/api/...` | `https://ifsaju.com/api/...` |
+| 전환 | 기본 | `TOSS_BUILD=1` |
+
+### 켜고 끄는 값
+
+| 값 | 효과 |
+| --- | --- |
+| `TOSS_BUILD=1` | `output: "export"` + API 라우트를 라우트 목록에서 제외 |
+| `NEXT_PUBLIC_API_ORIGIN` | 비면 상대경로(웹 그대로). 있으면 그 주소로 API 호출 |
+| `TOSS_ALLOWED_ORIGINS` | CORS 허용 출처 추가. 콤마 구분 |
+
+API 라우트 파일은 `route.api.ts`입니다. `next.config.ts`의 `pageExtensions`가 평소에는 `api.ts`를 포함해 라우트로 잡고, 토스 빌드에서는 빼서 제외합니다. **빌드 중에 파일을 옮겼다 되돌리는 방식은 중간에 끊기면 저장소가 깨지므로 쓰지 않았습니다.**
+
+### 배포 전에 확인할 것
+
+- `apps-in-toss.config.ts`의 `appName`이 **앱인토스 콘솔 값과 같아야** 합니다. 다르면 업로드가 거부됩니다.
+- WebView의 실제 `Origin`을 확인해 `TOSS_ALLOWED_ORIGINS`에 넣어야 합니다. **넣기 전에는 앱에서 API 호출이 CORS로 막힙니다.**
+- Firebase App Check 콘솔에도 그 출처를 등록해야 토큰이 발급됩니다.
+- 파일명은 `apps-in-toss.config.ts`입니다. v2의 `granite.config.ts`는 v3에서 마이그레이션 명령만 읽습니다.
+
 ## 로드맵
 
 마일스톤·리스크·지표는 [docs/ROADMAP.md](docs/ROADMAP.md)에 정리되어 있습니다.
