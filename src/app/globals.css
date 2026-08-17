@@ -281,6 +281,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .slider-title output { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--wine); color: white; display: grid; place-items: center; font-size: .65rem; }
 .slider-field input { width: 100%; accent-color: var(--wine); height: 1.4rem; margin: .45rem 0 .05rem; cursor: pointer; }
 .slider-ends { display: flex; justify-content: space-between; font-size: .57rem; color: var(--faint); }
+.slider-hint { display: block; font-size: .6rem; color: var(--faint); line-height: 1.5; margin: .15rem 0 .1rem; }
+
+/* 처음 쓰는 사람만 보는 예시. 입력란보다 앞서지 않도록 톤을 낮춘다. */
+.example-hint { margin: 0 0 1.1rem; padding: .95rem 1.05rem; border: 1px dashed rgba(122,29,47,.28); border-radius: .85rem; background: rgba(234,229,220,.4); }
+.example-hint-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; margin-bottom: .55rem; }
+.example-hint-head span { font-size: .68rem; font-weight: 600; color: var(--wine); letter-spacing: -.02em; }
+.example-hint-head button { border: 0; background: none; padding: 0; font-size: .6rem; color: var(--faint); cursor: pointer; text-decoration: underline; text-underline-offset: .18em; }
+.example-hint-head button:hover { color: var(--ink); }
+.example-line { display: flex; gap: .5rem; font-size: .66rem; line-height: 1.65; color: var(--ink); margin: 0 0 .35rem; }
+.example-line b { flex: 0 0 4.6rem; font-weight: 600; color: var(--faint); font-size: .6rem; padding-top: .1rem; }
+.example-foot { font-size: .6rem; color: var(--faint); margin: .6rem 0 0; line-height: 1.5; }
+.field-hint { display: block; font-size: .6rem; color: var(--faint); line-height: 1.5; margin: .1rem 0 .35rem; }
 .event-footer { margin-top: 1.7rem; }
 .spinner { width: .85rem; height: .85rem; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .8s linear infinite; }
 .error-panel { padding: 1rem 1.1rem; border-radius: .8rem; background: #f3e6e4; color: #6e353b; margin: 1.2rem 0 0; display: grid; gap: .35rem; font-size: .75rem; }
@@ -554,6 +566,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .checkmark { background: #282623; }
   .category-grid button[aria-pressed="true"], .feedback-box button:hover, .feedback-box button.selected { background: rgba(208,154,160,.13); color: #edbdc2; }
   .slider-group { background: rgba(255,255,255,.045); }
+  .example-hint { background: rgba(255,255,255,.035); border-color: rgba(208,154,160,.28); }
+  .example-hint-head span { color: #edbdc2; }
+  .example-line { color: #d5cec4; }
   .story-field small { background: #282623; }
   .error-panel { background: rgba(148,66,75,.2); color: #f0b8bd; }
   .error-panel span { color: #dba4a9; }

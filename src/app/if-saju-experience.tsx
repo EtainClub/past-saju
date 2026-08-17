@@ -45,15 +45,95 @@ const CATEGORIES: Array<{ label: EventCategory; glyph: string }> = [
   { label: "기타", glyph: "…" },
 ];
 
-const EXAMPLES: Record<EventCategory, { helper: string; placeholder: string }> = {
-  이직: { helper: "예: 안정적인 회사를 떠날지 고민했던 순간", placeholder: "그때 어떤 선택 앞에 서 있었나요? 당시 상황과 실제로 고른 길을 들려주세요." },
-  이사: { helper: "예: 익숙한 도시를 떠날 기회가 왔던 순간", placeholder: "어디로, 왜 옮길지 고민했나요? 마음에 남은 갈림길을 적어주세요." },
-  연애: { helper: "예: 관계를 이어갈지 멈출지 고민했던 순간", placeholder: "그 관계에서 어떤 선택을 했고, 무엇이 가장 마음에 남았나요?" },
-  진학: { helper: "예: 원하는 전공과 현실적인 선택 사이", placeholder: "당시 어떤 두 길 사이에서 고민했는지 적어주세요." },
-  창업: { helper: "예: 제안을 받아들일지 안정에 남을지", placeholder: "그 기회와 망설임, 실제 선택을 구체적으로 들려주세요." },
-  투자: { helper: "예: 큰 결정을 앞두고 주저했던 순간", placeholder: "어떤 조건과 두려움이 선택에 영향을 주었나요?" },
-  가족: { helper: "예: 가족을 위해 내 계획을 바꿨던 순간", placeholder: "누구의 잘잘못보다, 당시 내가 놓인 선택을 중심으로 적어주세요." },
-  기타: { helper: "오래 마음에 남아 있는 한 번의 갈림길", placeholder: "그때 무엇을 선택했고, 고르지 않은 길은 무엇이었나요?" },
+/**
+ * 카테고리별 안내.
+ *
+ * placeholder 는 **질문**이고 sample 은 **채워진 답변**이다. 둘은 역할이 다르다 —
+ * 처음 쓰는 사람에게는 "무엇을 묻는지"보다 "어느 정도로 쓰면 되는지"가 막막하다.
+ *
+ * sample 의 세 문장은 각각 story / outcome / alternative 에 대응한다.
+ * 서사 품질은 **구체성에 비례**하므로(고유명사·숫자·기간이 그대로 인용된다),
+ * 예시도 그 수준으로 적어 둔다.
+ */
+type CategoryGuide = {
+  helper: string;
+  placeholder: string;
+  sample: { story: string; outcome: string; alternative: string };
+};
+
+const EXAMPLES: Record<EventCategory, CategoryGuide> = {
+  이직: {
+    helper: "예: 안정적인 회사를 떠날지 고민했던 순간",
+    placeholder: "그때 어떤 선택 앞에 서 있었나요? 당시 상황과 실제로 고른 길을 들려주세요.",
+    sample: {
+      story: "10년 다닌 회사에서 팀장 승진 제안을 받았습니다. 같은 시기에 작은 회사에서 창업 멤버로 와 달라는 연락이 왔고, 두 달을 고민했습니다.",
+      outcome: "승진을 받아들이고 남았습니다. 안정이 필요한 시기였습니다.",
+      alternative: "그때 창업 쪽으로 갔다면 어땠을까 아직도 생각합니다.",
+    },
+  },
+  이사: {
+    helper: "예: 익숙한 도시를 떠날 기회가 왔던 순간",
+    placeholder: "어디로, 왜 옮길지 고민했나요? 마음에 남은 갈림길을 적어주세요.",
+    sample: {
+      story: "서울에서 15년을 살다가 고향에 일자리가 났습니다. 부모님은 내려오길 바라셨고, 저는 여기서 쌓은 관계가 아까웠습니다.",
+      outcome: "서울에 남았습니다.",
+      alternative: "내려갔다면 부모님 곁에 있었을 텐데 하는 마음이 남습니다.",
+    },
+  },
+  연애: {
+    helper: "예: 관계를 이어갈지 멈출지 고민했던 순간",
+    placeholder: "그 관계에서 어떤 선택을 했고, 무엇이 가장 마음에 남았나요?",
+    sample: {
+      story: "3년 만난 사람과 결혼 이야기가 나왔습니다. 서로를 아꼈지만 살고 싶은 도시가 달랐고, 반년을 미뤘습니다.",
+      outcome: "결국 각자의 길로 갔습니다.",
+      alternative: "제가 먼저 옮겨 갔다면 달랐을까 생각합니다.",
+    },
+  },
+  진학: {
+    helper: "예: 원하는 전공과 현실적인 선택 사이",
+    placeholder: "당시 어떤 두 길 사이에서 고민했는지 적어주세요.",
+    sample: {
+      story: "하고 싶던 전공과 취업이 잘 되는 전공 사이에서 고민했습니다. 집안 형편도 마음에 걸렸습니다.",
+      outcome: "취업이 잘 되는 쪽을 골랐습니다.",
+      alternative: "원하던 공부를 계속했다면 지금 무엇을 하고 있을지 궁금합니다.",
+    },
+  },
+  창업: {
+    helper: "예: 제안을 받아들일지 안정에 남을지",
+    placeholder: "그 기회와 망설임, 실제 선택을 구체적으로 들려주세요.",
+    sample: {
+      story: "준비하던 아이템으로 투자 제안을 받았습니다. 대출도 필요했고 가족을 설득해야 했습니다.",
+      outcome: "결국 시작하지 않았습니다.",
+      alternative: "그때 밀어붙였다면 어떻게 됐을지 자주 떠올립니다.",
+    },
+  },
+  투자: {
+    helper: "예: 큰 결정을 앞두고 주저했던 순간",
+    placeholder: "어떤 조건과 두려움이 선택에 영향을 주었나요?",
+    sample: {
+      story: "모아 둔 돈 전부가 들어가는 결정이었습니다. 주변에서는 지금이라고 했지만 확신이 서지 않았습니다.",
+      outcome: "결국 넣지 않고 두었습니다.",
+      alternative: "들어갔다면 지금 다른 자리에 있었을까 싶습니다.",
+    },
+  },
+  가족: {
+    helper: "예: 가족을 위해 내 계획을 바꿨던 순간",
+    placeholder: "누구의 잘잘못보다, 당시 내가 놓인 선택을 중심으로 적어주세요.",
+    sample: {
+      story: "부모님이 편찮으셔서 제 계획을 미뤄야 하는 시기였습니다. 형제들과 역할을 나누는 문제도 있었습니다.",
+      outcome: "제 일을 접고 곁에 있기로 했습니다.",
+      alternative: "그때 제 길을 갔다면 지금 어땠을까 생각합니다.",
+    },
+  },
+  기타: {
+    helper: "오래 마음에 남아 있는 한 번의 갈림길",
+    placeholder: "그때 무엇을 선택했고, 고르지 않은 길은 무엇이었나요?",
+    sample: {
+      story: "오래 준비하던 일을 접을지 이어갈지 정해야 했습니다. 시간과 돈이 더 들어갈 상황이었습니다.",
+      outcome: "접기로 했습니다.",
+      alternative: "조금만 더 버텼다면 달랐을지 궁금합니다.",
+    },
+  },
 };
 const CALENDAR_TYPES = [
   { value: "solar", label: "양력" },
@@ -136,13 +216,36 @@ function Brand() {
   );
 }
 
-function SliderField({ label, low, high, value, onChange }: { label: string; low: string; high: string; value: number; onChange: (value: number) => void }) {
+function SliderField({ label, hint, low, high, value, onChange }: { label: string; hint: string; low: string; high: string; value: number; onChange: (value: number) => void }) {
   return (
     <label className="slider-field">
       <span className="slider-title"><span>{label}</span><output>{value}</output></span>
+      <small className="slider-hint">{hint}</small>
       <input type="range" min="1" max="5" step="1" value={value} onChange={(event) => onChange(Number(event.target.value))} />
       <span className="slider-ends"><span>{low}</span><span>{high}</span></span>
     </label>
+  );
+}
+
+/**
+ * 처음 쓰는 사람만 보는 예시.
+ *
+ * 익숙해지면 방해가 되므로 한 번 닫으면 다시 뜨지 않는다(localStorage).
+ * **자동으로 채워 넣지 않는다** — 예시가 그대로 제출되면 남의 이야기로
+ * 사주를 보게 된다. 읽고 자기 말로 쓰게 하는 것이 목적이다.
+ */
+function ExampleHint({ guide, onDismiss }: { guide: CategoryGuide; onDismiss: () => void }) {
+  return (
+    <aside className="example-hint">
+      <div className="example-hint-head">
+        <span>이렇게 적으면 좋아요</span>
+        <button type="button" onClick={onDismiss} aria-label="예시 다시 보지 않기">다시 보지 않기</button>
+      </div>
+      <p className="example-line"><b>그때의 이야기</b>{guide.sample.story}</p>
+      <p className="example-line"><b>실제로는</b>{guide.sample.outcome}</p>
+      <p className="example-line"><b>다른 길</b>{guide.sample.alternative}</p>
+      <p className="example-foot">구체적으로 쓸수록 좋습니다. 적어 주신 표현이 결과 문장에 그대로 인용돼요.</p>
+    </aside>
   );
 }
 
@@ -157,6 +260,9 @@ export function IfSajuExperience() {
   const [birth, setBirth] = useState<BirthInput>(EMPTY_BIRTH);
   const [event, setEvent] = useState<ReadingInput["event"]>(EMPTY_EVENT);
   const [context, setContext] = useState(EMPTY_CONTEXT);
+  // 서버 렌더와 첫 클라이언트 렌더가 어긋나면 안 되므로 false 로 시작하고,
+  // localStorage 를 읽은 뒤에만 켠다.
+  const [showExample, setShowExample] = useState(false);
   const [showOptional, setShowOptional] = useState(false);
   const [session, setSession] = useState<SessionEnvelope | null>(null);
   const [candidate, setCandidate] = useState<CardSlot | null>(null);
@@ -188,6 +294,8 @@ export function IfSajuExperience() {
     const frame = requestAnimationFrame(() => {
       const accepted = localStorage.getItem("ifsaju-age-confirmed") === "yes";
       setAgeGate(accepted ? "accepted" : "open");
+      // 예시는 처음 쓰는 사람에게만. 한 번 닫으면 다시 뜨지 않는다.
+      setShowExample(localStorage.getItem("ifsaju-example-seen") !== "yes");
       const cached = localStorage.getItem("ifsaju-birth");
       if (cached) {
         try { setBirth({ ...EMPTY_BIRTH, ...JSON.parse(cached) }); } catch { /* ignore invalid local cache */ }
@@ -562,10 +670,11 @@ export function IfSajuExperience() {
             <fieldset className="category-field"><legend>어떤 일이었나요?</legend><div className="category-grid">{CATEGORIES.map(({ label, glyph }) => <button key={label} type="button" aria-pressed={event.category === label} onClick={() => setEvent({ ...event, category: label })}><b>{glyph}</b><span>{label}</span></button>)}</div></fieldset>
             <p className="category-helper">{EXAMPLES[event.category].helper}</p>
             <label className="field month-field"><span>사건이 있었던 때</span><input required type="month" value={event.date} max={new Date().toISOString().slice(0, 7)} onChange={(e) => setEvent({ ...event, date: e.target.value })} /></label>
+            {showExample && <ExampleHint guide={EXAMPLES[event.category]} onDismiss={() => { setShowExample(false); localStorage.setItem("ifsaju-example-seen", "yes"); }} />}
             <label className="field story-field"><span>그때의 이야기를 들려주세요 <em>필수</em></span><textarea required minLength={10} maxLength={600} value={event.story} placeholder={EXAMPLES[event.category].placeholder} onChange={(e) => setEvent({ ...event, story: e.target.value })} /><small className={event.story.length > 560 ? "limit" : ""}>{event.story.length} / 600</small></label>
             <button className="optional-toggle" type="button" aria-expanded={showOptional} onClick={() => setShowOptional((value) => !value)}><span>조금 더 들려주기 <small>선택</small></span><b>{showOptional ? "−" : "+"}</b></button>
-            {showOptional && <div className="optional-fields"><label className="field"><span>실제로는 어떻게 되었나요?</span><textarea maxLength={400} value={event.outcome} onChange={(e) => setEvent({ ...event, outcome: e.target.value })} /></label><label className="field"><span>다른 길을 생각해 본 적 있나요?</span><textarea maxLength={400} value={event.alternative} onChange={(e) => setEvent({ ...event, alternative: e.target.value })} /></label></div>}
-            <div className="slider-group"><h2>그때의 마음은 어땠나요?</h2><p>정확하지 않아도 괜찮아요. 직감에 가까운 곳을 골라주세요.</p><SliderField label="준비도" low="전혀 준비되지 않음" high="충분히 준비됨" value={context.readiness} onChange={(value) => setContext({ ...context, readiness: value })} /><SliderField label="선택의 자유" low="선택지가 거의 없음" high="내 뜻대로 가능" value={context.freedom} onChange={(value) => setContext({ ...context, freedom: value })} /><SliderField label="상실의 두려움" low="크지 않았음" high="매우 컸음" value={context.fear} onChange={(value) => setContext({ ...context, fear: value })} /></div>
+            {showOptional && <div className="optional-fields"><label className="field"><span>실제로는 어떻게 되었나요?</span><small className="field-hint">실제로 고른 길이 무엇인지 알아야 &lsquo;가지 않은 길&rsquo;을 반대 방향으로 잡습니다.</small><textarea maxLength={400} value={event.outcome} placeholder={`예: ${EXAMPLES[event.category].sample.outcome}`} onChange={(e) => setEvent({ ...event, outcome: e.target.value })} /></label><label className="field"><span>다른 길을 생각해 본 적 있나요?</span><small className="field-hint">아쉬움이 남는 쪽을 적어 주시면 그 방향으로 이야기를 풉니다.</small><textarea maxLength={400} value={event.alternative} placeholder={`예: ${EXAMPLES[event.category].sample.alternative}`} onChange={(e) => setEvent({ ...event, alternative: e.target.value })} /></label></div>}
+            <div className="slider-group"><h2>그때의 마음은 어땠나요?</h2><p>정확하지 않아도 괜찮아요. <b>지금 돌아본 느낌</b>으로 고르시면 됩니다. 세 값이 카드 세 장을 고르는 데 함께 쓰여요.</p><SliderField label="준비도" hint="그 선택을 감당할 준비가 얼마나 되어 있었나요? (돈·경험·주변 지원)" low="전혀 준비되지 않음" high="충분히 준비됨" value={context.readiness} onChange={(value) => setContext({ ...context, readiness: value })} /><SliderField label="선택의 자유" hint="다른 길을 고를 여지가 실제로 있었나요? 이미 정해진 상황이었나요?" low="선택지가 거의 없음" high="내 뜻대로 가능" value={context.freedom} onChange={(value) => setContext({ ...context, freedom: value })} /><SliderField label="상실의 두려움" hint="그 선택으로 잃을까 봐 두려웠던 것이 얼마나 컸나요?" low="크지 않았음" high="매우 컸음" value={context.fear} onChange={(value) => setContext({ ...context, fear: value })} /></div>
             {error && <div className="error-panel" role="alert"><strong>{error.message}</strong>{error.support && <span>{error.support}</span>}</div>}
             <div className="form-footer event-footer"><span className="privacy-note"><LockIcon /> 선택지는 서버에서 봉인됩니다.</span><button className="primary-button" type="submit" disabled={isPreparing || event.story.trim().length < 10 || !event.date}>{isPreparing ? <><span className="spinner" /> 세 길을 봉인하는 중</> : <>세 개의 길 만나기 <Arrow /></>}</button></div>
           </form>
