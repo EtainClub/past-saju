@@ -1,5 +1,6 @@
 import type { ReadingInput } from "../reading-types";
 import { FALLBACK_BETA, MODEL, getAnthropic, serverFallbackEnabled } from "../llm/client";
+import { recordLlmUsage } from "../llm/budget";
 import { CATEGORY_HINT, DOMAINS, POLARITY_POLES, oppositePole } from "./ontology";
 import { groundEvidence } from "./evidence";
 import type { DomainId, ForkResult, PolarityValue } from "./types";
@@ -123,17 +124,28 @@ function intensityFrom(context: ReadingInput["context"]): 1 | 2 | 3 {
   return 3;
 }
 
+/**
+ * 실제로 나가는 요청 본문. 분류기와 단가 실측(`scripts/llm-cost.ts`)이 **같은 것**을
+ * 쓴다 — 스크립트가 프롬프트를 따로 들고 있으면 실측값이 실제 비용과 무관해진다.
+ */
+export function buildClassifyRequest(input: ReadingInput) {
+  return {
+    model: MODEL,
+    max_tokens: 4096,
+    output_config: { effort: "low" as const, format: { type: "json_schema" as const, schema: SCHEMA } },
+    system: [{ type: "text" as const, text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" as const } }],
+    messages: [{ role: "user" as const, content: userBlock(input) }],
+    ...(serverFallbackEnabled() ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
+  };
+}
+
 export async function classifyForkWithLlm(input: ReadingInput): Promise<ForkResult> {
   let text: string;
   try {
-    const response = await getAnthropic().beta.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userBlock(input) }],
-      ...(serverFallbackEnabled() ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
-    });
+    const response = await getAnthropic().beta.messages.create(buildClassifyRequest(input));
+
+    // 계량은 성공·거절 어느 쪽이든 한다. 돈은 이미 나갔다.
+    await recordLlmUsage("l2", response.usage);
 
     // 안전 분류기가 거절하면 content를 읽기 전에 걸러야 한다.
     if (response.stop_reason === "refusal") return { status: "UNKNOWN", reason: "llm-refusal" };

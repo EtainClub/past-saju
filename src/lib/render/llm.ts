@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "../firebase-admin";
 import { FALLBACK_BETA, MODEL, getAnthropic, serverFallbackEnabled } from "../llm/client";
-import { reserveLlmCall } from "../llm/budget";
+import { recordLlmUsage, reserveLlmCall } from "../llm/budget";
 import type { NarrativeSpec, ReadingInput, ReadingResult } from "../reading-types";
 import type { ForkResult } from "../fork/types";
 import { COST_COPY } from "./template";
@@ -132,6 +132,27 @@ function buildPayload(input: ReadingInput, spec: NarrativeSpec, fork: ForkResult
   };
 }
 
+/**
+ * 실제로 나가는 요청 본문. 렌더러와 단가 실측(`scripts/llm-cost.ts`)이 **같은 것**을
+ * 쓴다. 스크립트가 프롬프트를 따로 들고 있으면 곧 어긋나고, 그러면 실측값이
+ * 실제 비용과 무관해진다.
+ */
+export function buildRenderRequest(input: ReadingInput, spec: NarrativeSpec, fork: ForkResult) {
+  const payload = JSON.stringify(buildPayload(input, spec, fork), null, 2);
+  const knownIds = factIdsOf(spec);
+  return {
+    model: MODEL,
+    max_tokens: 8000,
+    output_config: { effort: "medium" as const, format: { type: "json_schema" as const, schema: SCHEMA } },
+    system: [{ type: "text" as const, text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" as const } }],
+    messages: [{
+      role: "user" as const,
+      content: `아래 사실만으로 여섯 문단을 쓰십시오. 사용 가능한 fact id: ${knownIds.join(", ")}\n\n${payload}`,
+    }],
+    ...(serverFallbackEnabled() ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
+  };
+}
+
 function parseProse(raw: string): LlmProse | null {
   let parsed: unknown;
   try {
@@ -205,8 +226,7 @@ export async function renderWithLlm(
   if (!llmRenderEnabled()) return null;
 
   const source = [input.event.story, input.event.outcome, input.event.alternative].filter(Boolean).join("\n");
-  const payload = JSON.stringify(buildPayload(input, spec, fork), null, 2);
-  const knownIds = factIdsOf(spec);
+  const request = buildRenderRequest(input, spec, fork);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     if (!(await reserveLlmCall())) {
@@ -217,18 +237,10 @@ export async function renderWithLlm(
 
     let text: string;
     try {
-      const stream = getAnthropic().beta.messages.stream({
-        model: MODEL,
-        max_tokens: 8000,
-        output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
-        system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-        messages: [{
-          role: "user",
-          content: `아래 사실만으로 여섯 문단을 쓰십시오. 사용 가능한 fact id: ${knownIds.join(", ")}\n\n${payload}`,
-        }],
-        ...(serverFallbackEnabled() ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
-      });
+      const stream = getAnthropic().beta.messages.stream(request);
       const message = await stream.finalMessage();
+      // 계량은 성공·거절·형식위반 어느 쪽이든 한다. 돈은 이미 나갔다.
+      await recordLlmUsage("l5", message.usage);
       if (message.stop_reason === "refusal") {
         await recordRenderMetric("renderFallback_refusal");
         return null;
