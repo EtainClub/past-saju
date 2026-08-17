@@ -5,6 +5,7 @@ import Link from "next/link";
 import { apiUrl } from "@/lib/api-base";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
 import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, warmAppCheck, type AuthState } from "@/lib/firebase-client";
+import { IS_TOSS_APP } from "@/lib/platform";
 
 type Stage = "landing" | "birth" | "event" | "cards" | "reading";
 type CardSlot = 0 | 1 | 2;
@@ -248,12 +249,19 @@ type SavedItem = { id: string; createdAt: number; category: string; eventDate: s
  * 데스크톱은 스크롤 여유가 있어 하단 고정 바가 화면만 먹는다. 모바일에서는
  * 엄지 반경 안에 있는 유일한 자리라 앱처럼 쓰이려면 여기가 맞다.
  */
-const TABS: Array<{ key: Tab; label: string; glyph: string }> = [
+const ALL_TABS: Array<{ key: Tab; label: string; glyph: string }> = [
   { key: "story", label: "이야기", glyph: "◇" },
   { key: "chart", label: "내 사주", glyph: "☰" },
   { key: "archive", label: "보관함", glyph: "▤" },
   { key: "more", label: "더보기", glyph: "⋯" },
 ];
+
+/**
+ * 토스 미니앱에서는 보관함을 뺀다 — 구글 연동이 WebView 에서 성립하지
+ * 않아 영영 비어 있을 탭이다(`lib/platform.ts`). 하단 바와 상단 바가 같은
+ * 목록을 쓰므로 여기서 한 번 거르면 양쪽이 함께 맞는다.
+ */
+const TABS = ALL_TABS.filter((item) => !(IS_TOSS_APP && item.key === "archive"));
 
 function BottomNav({ current, onSelect }: { current: Tab; onSelect: (tab: Tab) => void }) {
   return (
@@ -466,6 +474,16 @@ function ArchiveScreen({
  * 여기서는 가치를 이미 경험했으므로 거절해도 잃는 게 없다.
  */
 function SaveBox({ state, linked, onSave }: { state: "idle" | "working" | "saved" | "failed"; linked: boolean; onSave: () => void }) {
+  // 토스 미니앱에서는 저장 자체가 성립하지 않는다(`lib/platform.ts`).
+  // 7일 뒤 사라진다는 사실은 알려야 하지만, 누를 수 없는 버튼은 빼는 게 맞다.
+  if (IS_TOSS_APP) {
+    return (
+      <div className="save-box">
+        <strong>이 이야기는 7일 뒤 사라집니다.</strong>
+        <span>다시 보고 싶다면 지금 읽어 두세요. 보관 기능은 준비하고 있어요.</span>
+      </div>
+    );
+  }
   if (state === "saved") {
     return (
       <div className="save-box saved">
@@ -1172,7 +1190,7 @@ export function IfSajuExperience() {
         />
       )}
 
-      {tab === "archive" && (
+      {tab === "archive" && !IS_TOSS_APP && (
         <ArchiveScreen
           items={savedList}
           error={savedError}
@@ -1195,10 +1213,13 @@ export function IfSajuExperience() {
           <h1>내 정보</h1>
           <div className="more-card">
             <strong>계정</strong>
-            {auth && !auth.isAnonymous
-              ? <span>{auth.name ? `${auth.name} 님으로 연결됨` : "구글 계정으로 연결됨"}. 보관한 이야기를 어느 기기에서나 볼 수 있어요.</span>
-              : <span>지금은 연결하지 않은 상태예요. 연결하면 보관한 이야기를 기기를 바꿔도 볼 수 있습니다.</span>}
-            {(!auth || auth.isAnonymous) && (
+            {IS_TOSS_APP
+              // 토스 안에서는 연결할 방법이 없다. 없는 걸 권하지 않는다.
+              ? <span>토스로 열었을 때는 계정 연결 없이 바로 쓰실 수 있어요. 대신 읽은 이야기는 7일 뒤 사라집니다.</span>
+              : auth && !auth.isAnonymous
+                ? <span>{auth.name ? `${auth.name} 님으로 연결됨` : "구글 계정으로 연결됨"}. 보관한 이야기를 어느 기기에서나 볼 수 있어요.</span>
+                : <span>지금은 연결하지 않은 상태예요. 연결하면 보관한 이야기를 기기를 바꿔도 볼 수 있습니다.</span>}
+            {!IS_TOSS_APP && (!auth || auth.isAnonymous) && (
               <button className="secondary-button" type="button" onClick={linkFromArchive}>구글 계정 연결하기</button>
             )}
           </div>
