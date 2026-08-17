@@ -1,9 +1,10 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "../firebase-admin";
-import { FALLBACK_BETA, MODEL, getAnthropic, serverFallbackEnabled } from "../llm/client";
+import { FALLBACK_BETA, getAnthropic, modelFor, serverFallbackEnabled, supportsEffort, supportsFallbacks } from "../llm/client";
 import { recordLlmUsage, reserveLlmCall } from "../llm/budget";
 import type { NarrativeSpec, ReadingInput, ReadingResult } from "../reading-types";
 import type { ForkResult } from "../fork/types";
+import { POLE_LABEL } from "../fork/ontology";
 import { COST_COPY } from "./template";
 import { checkFidelity, factIdsOf } from "./fidelity";
 
@@ -72,6 +73,9 @@ const SYSTEM_PROMPT = `당신은 사주 해석 엔진이 확정한 사실을 한
 - 단정적 예언을 하지 마십시오. "~하게 된다" 대신 "~가능성이 읽힙니다", "~했을 겁니다".
 - 의료·법률·재무 조언을 하지 마십시오.
 - 이 글은 실제로 일어난 일이 아니라 **가지 않은 길의 가정**입니다. 과거 가정형으로 쓰십시오.
+- **방향을 뒤집지 마십시오.** direction.notTaken 쪽을 골랐다면의 이야기입니다.
+  direction.actuallyChose 는 **실제로 일어난 일**이므로 가정의 대상이 아닙니다.
+  userStory 를 읽고 방향을 직접 판단하지 마십시오 — direction 이 정답입니다.
 
 # 사용자의 이야기를 반영하십시오 (가장 중요)
 userStory는 사용자가 직접 쓴 말입니다. 이 글은 그 사람의 이야기여야 합니다.
@@ -107,8 +111,19 @@ function buildPayload(input: ReadingInput, spec: NarrativeSpec, fork: ForkResult
     valence: point.valence,
   }));
   const evidence = fork.status === "CLASSIFIED" ? fork.frame.evidence : null;
+  // 방향은 L2가 이미 확정한 심볼이다. 넘기지 않으면 모델이 userStory 를 보고
+  // 다시 추론하고, **실제로 택한 쪽을 가지 않은 길로 뒤집어 쓰는 일이 생긴다**
+  // (2026-08-17 모델 비교에서 관측 — §5.D). 심볼을 접었으면 그대로 펴야 한다.
+  const direction = fork.status === "CLASSIFIED"
+    ? {
+      actuallyChose: POLE_LABEL[fork.frame.key.actualChoice],
+      notTaken: POLE_LABEL[fork.frame.key.counterfactual],
+      note: "이 글은 notTaken 쪽을 골랐다면의 이야기다. actuallyChose 는 실제로 일어난 일이므로 가정의 대상이 아니다.",
+    }
+    : null;
   return {
     narrative_scope: "counterfactual_3y",
+    direction,
     // 사용자가 실제로 쓴 말. 서사가 "내 이야기"로 읽히려면 이게 닿아야 한다.
     // 인용은 반드시 여기 실재하는 문자열이어야 하며, 검증에서 대조한다.
     userStory: {
@@ -137,23 +152,35 @@ function buildPayload(input: ReadingInput, spec: NarrativeSpec, fork: ForkResult
  * 쓴다. 스크립트가 프롬프트를 따로 들고 있으면 곧 어긋나고, 그러면 실측값이
  * 실제 비용과 무관해진다.
  */
-export function buildRenderRequest(input: ReadingInput, spec: NarrativeSpec, fork: ForkResult) {
+export function buildRenderRequest(
+  input: ReadingInput,
+  spec: NarrativeSpec,
+  fork: ForkResult,
+  model = modelFor("l5"),
+) {
   const payload = JSON.stringify(buildPayload(input, spec, fork), null, 2);
   const knownIds = factIdsOf(spec);
   return {
-    model: MODEL,
+    model,
     max_tokens: 8000,
-    output_config: { effort: "medium" as const, format: { type: "json_schema" as const, schema: SCHEMA } },
+    // 스키마는 모든 모델에 걸고, effort 는 지원하는 모델에만 붙인다.
+    output_config: {
+      ...(supportsEffort(model) ? { effort: "medium" as const } : {}),
+      format: { type: "json_schema" as const, schema: SCHEMA },
+    },
     system: [{ type: "text" as const, text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" as const } }],
     messages: [{
       role: "user" as const,
       content: `아래 사실만으로 여섯 문단을 쓰십시오. 사용 가능한 fact id: ${knownIds.join(", ")}\n\n${payload}`,
     }],
-    ...(serverFallbackEnabled() ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
+    ...(serverFallbackEnabled() && supportsFallbacks(model)
+      ? { betas: [FALLBACK_BETA], fallbacks: "default" as const }
+      : {}),
   };
 }
 
-function parseProse(raw: string): LlmProse | null {
+/** 모델 비교(`scripts/llm-cost.ts --models`)도 같은 파서를 써야 한다. */
+export function parseProse(raw: string): LlmProse | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -180,7 +207,7 @@ function parseProse(raw: string): LlmProse | null {
  * 결정론으로 남기는 것: overview2의 도입 문장과 대가 문장, 타임라인 라벨·개월·톤,
  * 얻는 것·놓는 것, 근거란, 마무리 문구. 모델은 그 사이의 산문만 쓴다.
  */
-function merge(base: ReadingResult, prose: LlmProse, spec: NarrativeSpec): ReadingResult {
+export function merge(base: ReadingResult, prose: LlmProse, spec: NarrativeSpec): ReadingResult {
   const cost = COST_COPY[spec.costPattern];
   // 모델이 대가 문장을 이미 썼으면 덧붙이지 않는다. 지시만으로는 매번 지켜지지 않는다.
   const middle = prose.overview2.text.includes(cost)

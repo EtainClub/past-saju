@@ -1,6 +1,7 @@
 import { getAnthropic, MODEL } from "../src/lib/llm/client";
 import { buildClassifyRequest } from "../src/lib/fork/classify-llm";
-import { buildRenderRequest } from "../src/lib/render/llm";
+import { buildRenderRequest, merge, parseProse } from "../src/lib/render/llm";
+import { checkFidelity } from "../src/lib/render/fidelity";
 import { createReadingSession } from "../src/lib/reading-engine";
 import type { ReadingInput } from "../src/lib/reading-types";
 
@@ -94,6 +95,28 @@ function usd(tokens: number, perMtok: number) {
 function fmt(amount: number) {
   return `$${amount.toFixed(5)}`;
 }
+
+type Usage = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+};
+
+function costOf(u: Usage) {
+  return usd(u.input_tokens ?? 0, PRICE.input)
+    + usd(u.output_tokens ?? 0, PRICE.output)
+    + usd(u.cache_creation_input_tokens ?? 0, PRICE.cacheWrite)
+    + usd(u.cache_read_input_tokens ?? 0, PRICE.cacheRead);
+}
+
+/**
+ * ⚠ 단가는 모델마다 다르다. PRICE 는 한 벌뿐이므로 **모델 비교의 금액은
+ * 서로 비교할 수 없다.** 비교 가능한 것은 토큰 수와 지연이다.
+ * 모델별 단가를 넣으려면 요금 페이지 확인이 먼저다.
+ */
+const CANDIDATES = (process.env.LLM_COMPARE_MODELS ?? "claude-opus-5,claude-sonnet-5,claude-haiku-4-5-20251001")
+  .split(",").map((item) => item.trim()).filter(Boolean);
 
 async function countInputs(): Promise<Counted[]> {
   const client = getAnthropic();
@@ -225,6 +248,122 @@ async function sweepEffort() {
 }
 
 /**
+ * 모델 비교 — L5를 Opus 말고 값싼 모델로 내려도 되는가.
+ *
+ * 숫자만으로는 못 정한다. 이 서비스에서 서사는 **제품 가치 자체**라서,
+ * 싸고 빠르지만 밋밋하면 도입 의미가 없다. 그래서 셋을 함께 낸다.
+ *
+ *   비용·지연  — 잴 수 있다
+ *   충실성 통과 — 잴 수 있다. 실제 `checkFidelity`를 돌린다. 떨어지면
+ *                운영에서 템플릿으로 폴백하므로 **폴백률이 곧 품질 하한**이다
+ *   산문        — 못 잰다. 그대로 찍어서 사람이 읽는다
+ *
+ * 표본 3건이라 폴백률은 경향만 본다. 확정은 실트래픽이다.
+ */
+async function compareModels(layer: "l2" | "l5", models: string[]) {
+  const client = getAnthropic();
+  console.log(`\n=== 모델 비교 (${layer.toUpperCase()}) — 실제로 과금됩니다 ===\n`);
+
+  // 산문은 **항상 같은 샘플**을 찍는다. "첫 번째 통과분"을 찍으면 모델마다
+  // 다른 입력이 나와 품질 비교가 성립하지 않는다 — 실제로 그렇게 잘못 비교했다.
+  const PROSE_SAMPLE = 1; // 보통 서술
+
+  for (const model of models) {
+    let okCount = 0;
+    let costSum = 0;
+    const tokenSum = { input: 0, output: 0 };
+    let elapsedSum = 0;
+    const failures: string[] = [];
+    let sampleProse = "";
+    let sampleOk = false;
+    let error: string | null = null;
+
+    for (const [index, sample] of SAMPLES.entries()) {
+      const session = createReadingSession(sample.input);
+      const choice = session.choices[0];
+      const started = Date.now();
+
+      try {
+        if (layer === "l2") {
+          const response = await client.beta.messages.create(buildClassifyRequest(sample.input, model));
+          costSum += costOf(response.usage);
+          elapsedSum += Date.now() - started;
+          // L2의 성패는 "분류가 나왔는가"다. 스키마 위반·저신뢰는 UNKNOWN이 된다.
+          const block = response.content.find((item) => item.type === "text");
+          const text = block && block.type === "text" ? block.text : "";
+          const parsed = JSON.parse(text) as { domain?: string; confidence?: number };
+          tokenSum.input += response.usage.input_tokens ?? 0;
+          tokenSum.output += response.usage.output_tokens ?? 0;
+          if (parsed.domain && (parsed.confidence ?? 0) >= 0.7) okCount += 1;
+          else failures.push(`저신뢰/미분류(${parsed.confidence ?? "?"})`);
+          if (index === PROSE_SAMPLE) sampleProse = `${parsed.domain} conf=${parsed.confidence}`;
+          continue;
+        }
+
+        const stream = client.beta.messages.stream(
+          buildRenderRequest(sample.input, choice.narrativeSpec, session.fork, model),
+        );
+        const message = await stream.finalMessage();
+        costSum += costOf(message.usage);
+        tokenSum.input += message.usage.input_tokens ?? 0;
+        tokenSum.output += message.usage.output_tokens ?? 0;
+        elapsedSum += Date.now() - started;
+
+        const block = message.content.find((item) => item.type === "text");
+        const prose = parseProse(block && block.type === "text" ? block.text : "");
+        if (!prose) {
+          failures.push("스키마 위반");
+          if (index === PROSE_SAMPLE) sampleProse = "(스키마 위반으로 산문 없음)";
+          continue;
+        }
+        if (index === PROSE_SAMPLE) sampleProse = prose.overview1.text;
+
+        // 운영과 **같은 관문**을 통과시킨다. 여기서 떨어지면 실제로도 폴백한다.
+        const merged = merge(choice.result, prose, choice.narrativeSpec);
+        const source = [sample.input.event.story, sample.input.event.outcome, sample.input.event.alternative]
+          .filter(Boolean).join("\n");
+        const { ok, violations } = checkFidelity({
+          result: merged,
+          spec: choice.narrativeSpec,
+          source,
+          declaredFactIds: Object.values(prose).flatMap((paragraph) => paragraph.factIds),
+          quotedFragments: session.fork.status === "CLASSIFIED" ? session.fork.frame.evidence.quotes : [],
+        });
+        if (ok) okCount += 1;
+        else failures.push(violations[0] ?? "충실성 위반");
+        if (index === PROSE_SAMPLE) sampleOk = ok;
+      } catch (caught) {
+        error = (caught as Error).message.slice(0, 160);
+        break;
+      }
+    }
+
+    if (error) {
+      console.log(`${model}\n  ❌ 호출 실패 — ${error}\n`);
+      continue;
+    }
+
+    console.log(`${model}`);
+    console.log(
+      `  충실성 ${okCount}/${SAMPLES.length}  입력 ${tokenSum.input}tok  출력 ${tokenSum.output}tok`
+      + `  평균 ${(elapsedSum / SAMPLES.length / 1000).toFixed(1)}s  (${fmt(costSum)} — 아래 주의)`,
+    );
+    if (failures.length) console.log(`  실패 사유: ${[...new Set(failures)].join(" · ")}`);
+    if (sampleProse) {
+      console.log(`  ${layer === "l5" ? `개요1[${SAMPLES[PROSE_SAMPLE].label}, ${sampleOk ? "통과" : "탈락"}]` : "분류"}: ${sampleProse}`);
+    }
+    console.log();
+  }
+
+  console.log("⚠ 금액은 모델 간 비교 불가입니다 — PRICE 표가 한 벌이라 전부 같은 단가로 계산됩니다.");
+  console.log("  비교 가능한 것은 **토큰 수와 지연**입니다. 금액은 모델별 단가를 넣어야 나옵니다.");
+  if (layer === "l5") {
+    console.log("\n충실성은 하한만 봅니다. **문장이 좋은지는 위 개요1을 읽어야** 압니다.");
+    console.log("서사가 이 서비스의 제품 가치 자체이므로, 싸다고 자동으로 이기지 않습니다.");
+  }
+}
+
+/**
  * 하루 상한이 얼마인지 — §7-8이 실제로 묻는 것.
  *
  * 지금 상한은 "하루 500 호출"이다. 호출당 단가를 알면 그게 금액으로 얼마인지
@@ -268,6 +407,9 @@ async function main() {
     projectBudget();
   } else if (process.argv.includes("--sweep")) {
     await sweepEffort();
+  } else if (process.argv.includes("--models")) {
+    await compareModels("l5", CANDIDATES);
+    await compareModels("l2", CANDIDATES);
   } else {
     console.log("\n출력 토큰은 생성해 봐야 압니다. thinking 토큰이 출력에 합산 과금되므로");
     console.log("추정하지 않습니다. 실측하려면 --live 를 붙이십시오(과금됨).");

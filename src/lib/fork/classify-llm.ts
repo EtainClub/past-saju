@@ -1,5 +1,5 @@
 import type { ReadingInput } from "../reading-types";
-import { FALLBACK_BETA, MODEL, getAnthropic, serverFallbackEnabled } from "../llm/client";
+import { FALLBACK_BETA, getAnthropic, modelFor, serverFallbackEnabled, supportsEffort, supportsFallbacks } from "../llm/client";
 import { recordLlmUsage } from "../llm/budget";
 import { CATEGORY_HINT, DOMAINS, POLARITY_POLES, oppositePole } from "./ontology";
 import { groundEvidence } from "./evidence";
@@ -128,14 +128,20 @@ function intensityFrom(context: ReadingInput["context"]): 1 | 2 | 3 {
  * 실제로 나가는 요청 본문. 분류기와 단가 실측(`scripts/llm-cost.ts`)이 **같은 것**을
  * 쓴다 — 스크립트가 프롬프트를 따로 들고 있으면 실측값이 실제 비용과 무관해진다.
  */
-export function buildClassifyRequest(input: ReadingInput) {
+export function buildClassifyRequest(input: ReadingInput, model = modelFor("l2")) {
   return {
-    model: MODEL,
+    model,
     max_tokens: 4096,
-    output_config: { effort: "low" as const, format: { type: "json_schema" as const, schema: SCHEMA } },
+    // 스키마는 모든 모델에 걸고, effort 는 지원하는 모델에만 붙인다.
+    output_config: {
+      ...(supportsEffort(model) ? { effort: "low" as const } : {}),
+      format: { type: "json_schema" as const, schema: SCHEMA },
+    },
     system: [{ type: "text" as const, text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" as const } }],
     messages: [{ role: "user" as const, content: userBlock(input) }],
-    ...(serverFallbackEnabled() ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
+    ...(serverFallbackEnabled() && supportsFallbacks(model)
+      ? { betas: [FALLBACK_BETA], fallbacks: "default" as const }
+      : {}),
   };
 }
 
