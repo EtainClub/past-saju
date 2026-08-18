@@ -829,7 +829,7 @@ async function sha256(value: string): Promise<string | null> {
 
 export function IfSajuExperience() {
   const [stage, setStage] = useState<Stage>("landing");
-  const [ageGate, setAgeGate] = useState<"checking" | "open" | "accepted" | "blocked">("checking");
+  const [ageGate, setAgeGate] = useState<"unconfirmed" | "open" | "accepted" | "blocked">("unconfirmed");
   const [birth, setBirth] = useState<BirthInput>(EMPTY_BIRTH);
   const [event, setEvent] = useState<ReadingInput["event"]>(EMPTY_EVENT);
   const [context, setContext] = useState(EMPTY_CONTEXT);
@@ -885,7 +885,7 @@ export function IfSajuExperience() {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const accepted = localStorage.getItem("ifsaju-age-confirmed") === "yes";
-      setAgeGate(accepted ? "accepted" : "open");
+      setAgeGate(accepted ? "accepted" : "unconfirmed");
       // 예시는 처음 쓰는 사람에게만. 한 번 닫으면 다시 뜨지 않는다.
       setShowExample(localStorage.getItem("ifsaju-example-seen") !== "yes");
       const cached = localStorage.getItem("ifsaju-birth");
@@ -986,9 +986,15 @@ export function IfSajuExperience() {
   const input = useMemo<ReadingInput>(() => ({ birth, event, context }), [birth, event, context]);
   const birthCitySelection = BIRTH_CITIES.find((city) => city === birth.city) ?? OTHER_BIRTH_CITY;
 
+  /**
+   * 랜딩의 CTA를 누를 때만 묻는다 — 미니앱 진입 즉시가 아니다. 토스 심사가
+   * "접속 직후 바텀시트 노출"로 반려한 이유가 이거였다. 생년월일을 입력받기
+   * 직전(birth 단계 직전)에만 묻고, 랜딩 화면에서는 아무것도 띄우지 않는다.
+   */
   function acceptAge() {
     localStorage.setItem("ifsaju-age-confirmed", "yes");
     setAgeGate("accepted");
+    setStage("birth");
   }
 
   function openInfo(eventObject: ReactMouseEvent<HTMLButtonElement>) {
@@ -1347,7 +1353,7 @@ export function IfSajuExperience() {
               <strong>만약사주란?</strong>
               <p>미래를 점치지 않습니다. 대신 당신이 고르지 않은 길에서 무엇을 얻고 무엇을 잃었을지 3년치로 보여드립니다. 후회가 옅어지는 건 그다음입니다.</p>
             </div>
-            <button className="primary-button hero-button" type="button" onClick={() => setStage("birth")}>
+            <button className="primary-button hero-button" type="button" onClick={() => (ageGate === "accepted" ? setStage("birth") : setAgeGate("open"))}>
               그 길 끝을 확인하기 <Arrow />
             </button>
             <p className="microcopy"><LockIcon /> 이름과 연락처는 받지 않으며, 입력은 7일 뒤 사라집니다.</p>
@@ -1523,8 +1529,6 @@ export function IfSajuExperience() {
       {tab === "story" && (
         <footer className="footer"><span>© 2026 만약사주</span><button type="button" onClick={openInfo}>이용 안내</button><Link href="/privacy">개인정보처리방침</Link><Link href="/terms">이용약관</Link><span>첫 번째 이야기 · 가지 않은 운</span></footer>
       )}
-
-      {ageGate === "checking" && <div className="modal-layer age-layer age-checking" aria-label="연령 확인 준비 중"><span className="spinner" /></div>}
 
       {candidate !== null && <div className="modal-layer" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setCandidate(null); }}><section ref={decisionRef} tabIndex={-1} className="decision-sheet" style={{ "--sheet-x": `${sheetOrigin.x}px`, "--sheet-y": `${sheetOrigin.y}px` } as CSSProperties} role="dialog" aria-modal="true" aria-labelledby="decision-title"><span className="sheet-handle" /><div className={`mini-card card-back ${cardVariant(candidate)}`}><CardArtwork slot={candidate} /></div><p className="eyebrow centered"><span />마지막 확인</p><h2 id="decision-title">이 카드를 열까요?</h2><p>선택하면 다른 두 장은 열리지 않습니다.<br />고른 카드는 끝까지 바뀌지 않아요.</p><button data-autofocus className="primary-button full-button" type="button" onClick={openCard}>이 길을 열어볼게요 <Arrow /></button><button className="sheet-cancel" type="button" onClick={() => setCandidate(null)}>조금 더 생각할게요</button></section></div>}
 

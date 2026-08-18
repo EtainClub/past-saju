@@ -469,8 +469,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .full-button { width: 100%; }
 .sheet-cancel { min-height: 2.75rem; border: 0; background: transparent; color: var(--muted); font-size: .75rem; margin-top: .9rem; padding: .6rem 1rem; cursor: pointer; }
 .age-layer { align-items: center; }
-.age-checking { background: var(--paper); backdrop-filter: none; }
-.age-checking .spinner { color: var(--wine); }
 .age-gate { width: min(100%, 27rem); background: rgba(250,247,240,.96); border-radius: 1.5rem; padding: 2.6rem; text-align: center; box-shadow: 0 30px 90px rgba(27,23,20,.3); animation: materialize 350ms ease both; }
 .age-symbol { width: 4.5rem; height: 4.5rem; display: grid; place-items: center; margin: 0 auto 1.5rem; border-radius: 50%; border: 1px solid rgba(113,62,67,.25); color: var(--wine); font-family: "AppleMyungjo", Georgia, serif; letter-spacing: .1em; }
 
