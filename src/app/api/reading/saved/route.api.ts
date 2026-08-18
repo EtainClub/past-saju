@@ -12,13 +12,16 @@ export const runtime = "nodejs";
  * **여기서만 로그인이 필요하다.** 서비스 이용과 LLM 답변은 로그인 없이도
  * 되지만, "오래 두고 다시 보기"는 누구 것인지 알아야 성립한다.
  *
- * 구글 연동까지 요구하는 이유: 익명 uid 는 브라우저 저장소가 비면 사라진다.
- * 1년을 약속하면서 열쇠가 먼저 사라지는 것은 약속이 아니다.
+ * 익명 로그인 uid 만으로 충분하다 — 구글 연동을 요구하지 않는다. 기기를
+ * 바꾸면 uid 를 잃는다는 문제는 여전하지만, 이제 백업 코드
+ * (`/api/auth/backup-code`, `lib/backup-code.ts`)가 그 열쇠를 대신 쥔다.
+ * 토스 미니앱은 애초에 구글 연동이 안 되므로(`lib/platform.ts`) 이 완화가
+ * 없으면 미니앱에서는 보관 기능 자체가 성립하지 않는다.
  */
 
 function unauthenticated() {
   return Response.json(
-    { code: "sign-in-required", message: "저장하려면 구글 계정 연동이 필요해요." },
+    { code: "sign-in-required", message: "인증에 실패했어요. 새로고침한 뒤 다시 시도해 주세요." },
     { status: 401 },
   );
 }
@@ -29,7 +32,7 @@ export async function GET(request: Request) {
   if (blocked) return blocked;
 
   const requester = await identify(request);
-  if (!requester.uid || !requester.linked) return unauthenticated();
+  if (!requester.uid) return unauthenticated();
 
   const verdict = await consumeRateLimit("feedback", `uid:${requester.uid}`);
   if (!verdict.ok) return rateLimitResponse(verdict);
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
 
   const requester = await identify(request);
-  if (!requester.uid || !requester.linked) return unauthenticated();
+  if (!requester.uid) return unauthenticated();
 
   const verdict = await consumeRateLimit("feedback", `uid:${requester.uid}`);
   if (!verdict.ok) return rateLimitResponse(verdict);

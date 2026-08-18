@@ -4,7 +4,7 @@ import { FormEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, useC
 import Link from "next/link";
 import { apiUrl } from "@/lib/api-base";
 import type { BirthInput, EventCategory, ReadingInput, ReadingResult, TenGodAxis } from "@/lib/reading-types";
-import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, warmAppCheck, type AuthState } from "@/lib/firebase-client";
+import { currentAuthState, ensureAnonymousAuth, linkGoogleAccount, requestHeaders, signInWithBackupToken, warmAppCheck, type AuthState } from "@/lib/firebase-client";
 import { APP_VERSION, IS_TOSS_APP } from "@/lib/platform";
 
 type Stage = "landing" | "birth" | "event" | "cards" | "reading";
@@ -309,11 +309,12 @@ const ALL_TABS: Array<{ key: Tab; label: string; glyph: string }> = [
 ];
 
 /**
- * 토스 미니앱에서는 보관함을 뺀다 — 구글 연동이 WebView 에서 성립하지
- * 않아 영영 비어 있을 탭이다(`lib/platform.ts`). 하단 바와 상단 바가 같은
- * 목록을 쓰므로 여기서 한 번 거르면 양쪽이 함께 맞는다.
+ * 토스 미니앱도 보관함을 그대로 보여준다. 예전엔 구글 연동이 안 되면
+ * (`lib/platform.ts`) 영영 비어 있는 탭이었지만, 이제 익명 uid 만으로도
+ * 보관되므로 토스에서도 채워진다. 기기를 바꿨을 때는 더보기 탭의 백업
+ * 코드로 이어본다.
  */
-const TABS = ALL_TABS.filter((item) => !(IS_TOSS_APP && item.key === "archive"));
+const TABS = ALL_TABS;
 
 function BottomNav({ current, onSelect }: { current: Tab; onSelect: (tab: Tab) => void }) {
   return (
@@ -625,25 +626,24 @@ function FortuneScreen({
  * **LLM 을 다시 부르지 않는다.**
  */
 function ArchiveScreen({
-  items, error, linked, onLink, onOpen, onRetry,
+  items, error, hasAuth, onOpen, onRetry,
 }: {
   items: SavedItem[] | null;
   error: string | null;
-  linked: boolean;
-  onLink: () => void;
+  hasAuth: boolean;
   onOpen: (item: SavedItem) => void;
   onRetry: () => void;
 }) {
-  if (!linked) {
+  if (!hasAuth) {
     return (
       <main className="tab-page">
         <p className="eyebrow"><span />보관함</p>
-        <h1>후회는 한 번 읽고<br />정리되지 않습니다.</h1>
+        <h1>인증에 실패했어요.</h1>
         <p className="tab-intro">
-          그래서 다시 꺼내 볼 수 있게 해 둡니다. 결과 화면에서 <b>보관하기</b>를 누르면
-          이곳에 쌓여요. 기기를 바꿔도 남으려면 구글 계정 연결이 필요합니다.
+          페이지를 새로고침한 뒤 다시 시도해 주세요. 계속되면 브라우저의
+          저장소 차단 설정을 확인해 보세요.
         </p>
-        <button className="primary-button" type="button" onClick={onLink}>구글 계정으로 시작하기</button>
+        <button className="primary-button" type="button" onClick={onRetry}>다시 시도하기</button>
       </main>
     );
   }
@@ -690,22 +690,12 @@ function ArchiveScreen({
  *
  * 여기서는 가치를 이미 경험했으므로 거절해도 잃는 게 없다.
  */
-function SaveBox({ state, linked, onSave }: { state: "idle" | "working" | "saved" | "failed"; linked: boolean; onSave: () => void }) {
-  // 토스 미니앱에서는 저장 자체가 성립하지 않는다(`lib/platform.ts`).
-  // 7일 뒤 사라진다는 사실은 알려야 하지만, 누를 수 없는 버튼은 빼는 게 맞다.
-  if (IS_TOSS_APP) {
-    return (
-      <div className="save-box">
-        <strong>이 이야기는 7일 뒤 사라집니다.</strong>
-        <span>다시 보고 싶다면 지금 읽어 두세요. 보관 기능은 준비하고 있어요.</span>
-      </div>
-    );
-  }
+function SaveBox({ state, onSave }: { state: "idle" | "working" | "saved" | "failed"; onSave: () => void }) {
   if (state === "saved") {
     return (
       <div className="save-box saved">
         <strong>보관했어요.</strong>
-        <span>이 이야기는 1년 동안 다시 볼 수 있어요. 언제든 지울 수 있습니다.</span>
+        <span>이 이야기는 1년 동안 다시 볼 수 있어요. 기기를 바꿔도 이어보려면 더보기 탭에서 백업 코드를 받아 두세요.</span>
       </div>
     );
   }
@@ -714,13 +704,73 @@ function SaveBox({ state, linked, onSave }: { state: "idle" | "working" | "saved
       <strong>이 이야기, 다시 꺼내 보실 건가요?</strong>
       <span>
         후회는 한 번 읽고 정리되지 않습니다. 지금은 <b>7일 뒤 자동으로 지워집니다.</b>{" "}
-        구글 계정으로 저장하면 1년 동안 다시 볼 수 있어요. 저장하지 않아도 결과는
-        그대로 보실 수 있습니다.
+        보관하면 1년 동안 다시 볼 수 있어요. 저장하지 않아도 결과는 그대로 보실 수 있습니다.
       </span>
       <button type="button" className="secondary-button" onClick={onSave} disabled={state === "working"}>
-        {state === "working" ? <><span className="spinner" /> 저장하는 중</> : linked ? "이 이야기 보관하기" : "구글 계정으로 저장하기"}
+        {state === "working" ? <><span className="spinner" /> 저장하는 중</> : "이 이야기 보관하기"}
       </button>
       {state === "failed" && <small className="save-error">저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.</small>}
+    </div>
+  );
+}
+
+/**
+ * 백업 코드 — 기기를 바꿔도 uid 를 되찾는 유일한 방법.
+ *
+ * 구글 연동은 웹에서만 되고 토스 미니앱에서는 애초에 안 된다(`lib/platform.ts`).
+ * 이 상자는 두 플랫폼에서 동일하게 동작한다 — App Check 로 보호된 API 호출일
+ * 뿐 OAuth 팝업이 아니기 때문이다.
+ */
+function BackupCodeBox({
+  code, issueState, onIssue,
+  recoverValue, recoverState, onRecoverChange, onRecover,
+}: {
+  code: string | null;
+  issueState: "idle" | "working" | "failed";
+  onIssue: () => void;
+  recoverValue: string;
+  recoverState: "idle" | "working" | "failed" | "not-found";
+  onRecoverChange: (value: string) => void;
+  onRecover: () => void;
+}) {
+  return (
+    <div className="more-card">
+      <strong>백업 코드</strong>
+      <span>
+        기기를 바꾸거나 앱을 지우면 지금 계정을 잃어요. 코드를 받아 두면
+        새 기기의 이 화면에 입력해 그대로 이어볼 수 있습니다.
+      </span>
+      {code ? (
+        <div className="backup-code-display">
+          <code>{code}</code>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => { void navigator.clipboard?.writeText(code); }}
+          >
+            복사하기
+          </button>
+        </div>
+      ) : (
+        <button className="secondary-button" type="button" onClick={onIssue} disabled={issueState === "working"}>
+          {issueState === "working" ? <><span className="spinner" /> 만드는 중</> : "백업 코드 만들기"}
+        </button>
+      )}
+      {issueState === "failed" && <small className="save-error">코드를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.</small>}
+      <div className="field">
+        <span>코드가 있다면</span>
+        <input
+          type="text"
+          placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+          value={recoverValue}
+          onChange={(event) => onRecoverChange(event.target.value)}
+        />
+      </div>
+      <button className="secondary-button" type="button" onClick={onRecover} disabled={recoverState === "working" || !recoverValue.trim()}>
+        {recoverState === "working" ? <><span className="spinner" /> 불러오는 중</> : "코드로 불러오기"}
+      </button>
+      {recoverState === "not-found" && <small className="save-error">코드를 찾을 수 없어요. 다시 확인해 주세요.</small>}
+      {recoverState === "failed" && <small className="save-error">불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.</small>}
     </div>
   );
 }
@@ -788,6 +838,10 @@ export function IfSajuExperience() {
   const [showExample, setShowExample] = useState(false);
   const [auth, setAuth] = useState<AuthState>(null);
   const [saveState, setSaveState] = useState<"idle" | "working" | "saved" | "failed">("idle");
+  const [backupCode, setBackupCode] = useState<string | null>(null);
+  const [backupCodeState, setBackupCodeState] = useState<"idle" | "working" | "failed">("idle");
+  const [recoverCode, setRecoverCode] = useState("");
+  const [recoverState, setRecoverState] = useState<"idle" | "working" | "failed" | "not-found">("idle");
   const [tab, setTab] = useState<Tab>("story");
   const [savedList, setSavedList] = useState<SavedItem[] | null>(null);
   const [savedError, setSavedError] = useState<string | null>(null);
@@ -1111,7 +1165,7 @@ export function IfSajuExperience() {
     setSavedError(null);
     try {
       const response = await fetch(apiUrl("/api/reading/saved"), { headers: await requestHeaders() });
-      if (response.status === 401) { setSavedList(null); return; }
+      if (response.status === 401) { setSavedList([]); setSavedError("인증에 실패했어요. 새로고침한 뒤 다시 시도해 주세요."); return; }
       if (!response.ok) throw new Error("목록을 불러오지 못했어요.");
       const data = (await response.json()) as { readings: SavedItem[] };
       setSavedList(data.readings);
@@ -1167,7 +1221,7 @@ export function IfSajuExperience() {
 
   function selectTab(next: Tab) {
     setTab(next);
-    if (next === "archive" && auth && !auth.isAnonymous && savedList === null) void loadArchive();
+    if (next === "archive" && auth && savedList === null) void loadArchive();
     if (next === "chart" && birth.date && chartSummary === null) void loadChart(birth);
     // 자정을 넘겨 열어 둔 화면이면 어제 것이 남아 있다. 그때만 다시 부른다.
     if (next === "fortune" && birth.date && fortune?.date !== seoulDate()) void loadFortune(birth);
@@ -1184,23 +1238,13 @@ export function IfSajuExperience() {
   /**
    * 이 이야기를 오래 보관한다.
    *
-   * 익명 상태면 먼저 구글 연동을 띄운다. **연동은 익명 uid 를 승격시키는 것**이라
-   * 방금 만든 이 세션이 그대로 내 것으로 남는다 — 새로 로그인하는 게 아니다.
+   * 익명 uid 만으로 저장된다 — 구글 연동을 요구하지 않는다(`api/reading/saved`).
+   * 기기를 바꿔도 이어보려면 별도로 백업 코드를 받아 두거나 구글 계정을
+   * 연결해야 하지만, 그건 저장 자체의 조건이 아니다.
    */
   async function saveReading() {
     if (!session || saveState === "working" || saveState === "saved") return;
     setSaveState("working");
-
-    if (!auth || auth.isAnonymous) {
-      const linked = await linkGoogleAccount();
-      if (!linked.ok) {
-        // 사용자가 팝업을 닫은 것은 실패가 아니다. 원래 자리로 돌려놓는다.
-        setSaveState(linked.reason === "cancelled" ? "idle" : "failed");
-        return;
-      }
-      setAuth(await currentAuthState());
-    }
-
     try {
       const response = await fetch(apiUrl("/api/reading/saved"), {
         method: "POST",
@@ -1212,6 +1256,50 @@ export function IfSajuExperience() {
       if (response.ok) setSavedList(null);
     } catch {
       setSaveState("failed");
+    }
+  }
+
+  /** 백업 코드 발급. 지금 uid 를 나중에 다른 기기에서 되찾을 열쇠다. */
+  async function issueBackupCode() {
+    setBackupCodeState("working");
+    try {
+      const response = await fetch(apiUrl("/api/auth/backup-code"), {
+        method: "POST",
+        headers: await requestHeaders(),
+      });
+      if (!response.ok) throw new Error();
+      const data = (await response.json()) as { code: string };
+      setBackupCode(data.code);
+      setBackupCodeState("idle");
+    } catch {
+      setBackupCodeState("failed");
+    }
+  }
+
+  /** 백업 코드로 이전 uid 로 갈아탄다. 성공하면 보관함을 다시 불러온다. */
+  async function redeemCode() {
+    if (!recoverCode.trim()) return;
+    setRecoverState("working");
+    try {
+      const response = await fetch(apiUrl("/api/auth/recover"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await requestHeaders()) },
+        body: JSON.stringify({ code: recoverCode }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setRecoverState(data.code === "not-found" ? "not-found" : "failed");
+        return;
+      }
+      const result = await signInWithBackupToken(data.customToken as string);
+      if (!result.ok) { setRecoverState("failed"); return; }
+      setAuth(await currentAuthState());
+      setSavedList(null);
+      setRecoverCode("");
+      setRecoverState("idle");
+      void loadArchive();
+    } catch {
+      setRecoverState("failed");
     }
   }
 
@@ -1422,7 +1510,7 @@ export function IfSajuExperience() {
             {basis && <section className="basis-section fade-in"><details><summary><span><b>왜 이런 결과가 나왔나요?</b><small>계산에 사용된 사주 근거 보기</small></span><i>＋</i></summary><div className="basis-content"><ul><li><span>사주 원국</span><p><strong>{basis.pillars}</strong></p></li><li><span>일간</span><p><strong>{basis.dayMaster}</strong>, {basis.strength}</p></li><li><span>대운</span><p>{basis.daeun}</p></li><li><span>용신·기신</span><p>{basis.usefulFlow}</p></li><li><span>사건 흐름</span><p>{basis.eventFlow}</p></li>{basis.turningPointsUsed.map((point) => <li key={point.monthOffset}><span>{point.monthOffset}개월째</span><p>{point.label}이 전환점으로 계산되었어요.</p></li>)}<li><span>현실 조건</span><p>{basis.realityContext}</p></li><li><span>출생 시각</span><p>{basis.hourPillarNote}</p></li></ul><p className="engine-note">계산 규칙 {basis.engineVersion}</p></div></details></section>}
             {isStreaming && <div className="writing-status" aria-live="polite"><span className="writing-line" /><span>운명의 다음 문장을 기록하고 있어요</span></div>}
             {error && <div className="error-panel reading-error" role="alert"><strong>{error.message}</strong></div>}
-            {closing && <section className="closing-section fade-in"><p>{closing.closingLine}</p><span className="closing-symbol" aria-hidden="true"><i /><i /></span><div className="feedback-box"><h2>이 이야기는 어떻게 느껴졌나요?</h2><p>당신의 답은 사주가 이야기에 실제로 기여하는지 확인하는 데 쓰여요.</p><div>{[{ key: "plausible", label: "꽤 그럴듯해요" }, { key: "uncertain", label: "잘 모르겠어요" }, { key: "not-really", label: "별로 그렇지 않아요" }].map((item) => <button type="button" key={item.key} aria-pressed={feedback === item.key} className={feedback === item.key ? "selected" : ""} disabled={Boolean(feedback)} onClick={() => sendFeedback(item.key)}>{feedback === item.key ? "✓ " : ""}{item.label}</button>)}</div>{feedback && <span className="thanks">고마워요. 답을 안전하게 기록했어요.</span>}</div><SaveBox state={saveState} linked={Boolean(auth && !auth.isAnonymous)} onSave={saveReading} /><p className="uncertainty">{closing.uncertaintyNote}</p><button className="secondary-button" type="button" onClick={resetEvent}>다른 갈림길 열어보기 <Arrow /></button></section>}
+            {closing && <section className="closing-section fade-in"><p>{closing.closingLine}</p><span className="closing-symbol" aria-hidden="true"><i /><i /></span><div className="feedback-box"><h2>이 이야기는 어떻게 느껴졌나요?</h2><p>당신의 답은 사주가 이야기에 실제로 기여하는지 확인하는 데 쓰여요.</p><div>{[{ key: "plausible", label: "꽤 그럴듯해요" }, { key: "uncertain", label: "잘 모르겠어요" }, { key: "not-really", label: "별로 그렇지 않아요" }].map((item) => <button type="button" key={item.key} aria-pressed={feedback === item.key} className={feedback === item.key ? "selected" : ""} disabled={Boolean(feedback)} onClick={() => sendFeedback(item.key)}>{feedback === item.key ? "✓ " : ""}{item.label}</button>)}</div>{feedback && <span className="thanks">고마워요. 답을 안전하게 기록했어요.</span>}</div><SaveBox state={saveState} onSave={saveReading} /><p className="uncertainty">{closing.uncertaintyNote}</p><button className="secondary-button" type="button" onClick={resetEvent}>다른 갈림길 열어보기 <Arrow /></button></section>}
           </div>
         </main>
       )}
@@ -1485,12 +1573,11 @@ export function IfSajuExperience() {
         />
       )}
 
-      {tab === "archive" && !IS_TOSS_APP && (
+      {tab === "archive" && (
         <ArchiveScreen
           items={savedList}
           error={savedError}
-          linked={Boolean(auth && !auth.isAnonymous)}
-          onLink={linkFromArchive}
+          hasAuth={Boolean(auth?.uid)}
           onRetry={loadArchive}
           onOpen={(item) => {
             if (item.slot === null) return;
@@ -1508,16 +1595,22 @@ export function IfSajuExperience() {
           <h1>내 정보</h1>
           <div className="more-card">
             <strong>계정</strong>
-            {IS_TOSS_APP
-              // 토스 안에서는 연결할 방법이 없다. 없는 걸 권하지 않는다.
-              ? <span>토스로 열었을 때는 계정 연결 없이 바로 쓰실 수 있어요. 대신 읽은 이야기는 7일 뒤 사라집니다.</span>
-              : auth && !auth.isAnonymous
-                ? <span>{auth.name ? `${auth.name} 님으로 연결됨` : "구글 계정으로 연결됨"}. 보관한 이야기를 어느 기기에서나 볼 수 있어요.</span>
-                : <span>지금은 연결하지 않은 상태예요. 연결하면 보관한 이야기를 기기를 바꿔도 볼 수 있습니다.</span>}
+            {auth && !auth.isAnonymous
+              ? <span>{auth.name ? `${auth.name} 님으로 연결됨` : "구글 계정으로 연결됨"}. 이 계정으로 로그인하면 웹 어디서나 볼 수 있어요.</span>
+              : <span>지금은 이 기기에만 연결된 상태예요. 기기를 바꾸면 아래 백업 코드가 있어야 이어볼 수 있어요.</span>}
             {!IS_TOSS_APP && (!auth || auth.isAnonymous) && (
               <button className="secondary-button" type="button" onClick={linkFromArchive}>구글 계정 연결하기</button>
             )}
           </div>
+          <BackupCodeBox
+            code={backupCode}
+            issueState={backupCodeState}
+            onIssue={issueBackupCode}
+            recoverValue={recoverCode}
+            recoverState={recoverState}
+            onRecoverChange={setRecoverCode}
+            onRecover={redeemCode}
+          />
           <div className="more-card">
             <strong>입력 예시</strong>
             <span>처음 쓸 때 보이던 예시를 다시 켤 수 있어요.</span>

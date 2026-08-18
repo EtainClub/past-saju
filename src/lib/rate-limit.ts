@@ -16,6 +16,10 @@ export const RATE_LIMITS = {
   /** 카드 공개 — 세션당 1회만 유효하므로 세션 한도보다 넉넉해도 된다. */
   stream: { limit: 30, windowMs: 60 * 60 * 1000 },
   feedback: { limit: 30, windowMs: 60 * 60 * 1000 },
+  /** 백업 코드 발급 — uid 기준. 정상 사용자는 한 시간에 여러 장 만들 일이 없다. */
+  authBackup: { limit: 5, windowMs: 60 * 60 * 1000 },
+  /** 백업 코드 복구 — 아직 uid 를 모르므로 IP 기준. 무작위 대입을 늦춘다. */
+  authRecovery: { limit: 20, windowMs: 60 * 60 * 1000 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

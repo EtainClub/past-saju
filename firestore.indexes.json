@@ -16,6 +16,7 @@
     { "collectionGroup": "readingSessions", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
     { "collectionGroup": "readingFeedback", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
     { "collectionGroup": "rateLimits", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
-    { "collectionGroup": "forkUnknowns", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
+    { "collectionGroup": "forkUnknowns", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "backupCodes", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
   ]
 }

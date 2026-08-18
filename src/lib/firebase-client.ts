@@ -165,6 +165,26 @@ export async function linkGoogleAccount(): Promise<{ ok: true; name: string | nu
   }
 }
 
+/**
+ * 백업 코드로 받은 커스텀 토큰으로 갈아탄다.
+ *
+ * 지금 이 기기의 uid 를 버리고, 코드가 가리키던 uid 로 로그인한다. 구글
+ * 연동과 달리 **지금 uid 는 사라진다** — 새 기기에서 막 생긴 익명 uid는
+ * 아직 아무것도 저장하지 않았을 것이므로 잃을 게 없다는 전제다.
+ */
+export async function signInWithBackupToken(customToken: string): Promise<{ ok: true } | { ok: false }> {
+  const mod = await loadAuth();
+  const app = ensureApp();
+  if (!mod || !app) return { ok: false };
+  try {
+    await mod.signInWithCustomToken(mod.getAuth(app), customToken);
+    return { ok: true };
+  } catch (error) {
+    console.error("백업 코드 로그인 실패", error);
+    return { ok: false };
+  }
+}
+
 async function collectAuthHeaders(): Promise<Record<string, string>> {
   const [appCheck, user] = await Promise.all([appCheckHeaders(), ensureAnonymousAuth()]);
   if (!user) return appCheck;

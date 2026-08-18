@@ -333,6 +333,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .more-card span { font-size: .68rem; color: var(--faint); line-height: 1.7; }
 .more-card b { color: var(--ink); font-weight: 600; }
 .more-card .secondary-button { align-self: flex-start; margin-top: .25rem; }
+.backup-code-display { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .7rem .85rem; border-radius: .7rem; background: rgba(255,255,255,.6); }
+.backup-code-display code { font-family: "SF Mono", "Menlo", monospace; font-size: .78rem; letter-spacing: .04em; color: var(--ink); word-break: break-all; }
 
 /* ── 내 사주 ─────────────────────────────────────────────────────────── */
 .chart-heading { font-family: "Iowan Old Style", "AppleMyungjo", Georgia, serif; font-size: 1.02rem; font-weight: 600; letter-spacing: -.03em; margin: 1.8rem 0 .7rem; }
